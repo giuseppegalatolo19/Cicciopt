@@ -19,7 +19,10 @@ where (l.slug = 'studio-forma' and s.slug <> 'coaching-online') or (l.slug = 'on
 on conflict do nothing;
 
 insert into public.availability_rules (location_id,iso_weekday,start_time,end_time)
-select l.id,d,'08:00','20:00' from public.locations l cross join generate_series(1,5) d where l.slug='studio-forma';
+select l.id,d,'08:00','20:00' from public.locations l cross join generate_series(1,5) d
+where l.slug='studio-forma' and not exists (
+  select 1 from public.availability_rules ar where ar.location_id=l.id and ar.iso_weekday=d and ar.service_id is null
+);
 
 insert into public.site_content (content_key,value,is_published,published_at) values
 ('home.hero','{"title":"Costruisci la tua forza. Con metodo.","body":"Allenamento personalizzato, metodo e supporto costante per risultati concreti e sostenibili."}',true,now()),

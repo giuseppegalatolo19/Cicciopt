@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, CalendarDays, Check, CheckCircle2, Clock3, KeyRound, LockKeyhole, Mail, MapPin, ShieldCheck, UserRound } from "lucide-react";
+import { AlertCircle, ArrowLeft, ArrowRight, CalendarDays, Check, CheckCircle2, Clock3, KeyRound, LockKeyhole, Mail, MapPin, ShieldCheck, UserRound } from "lucide-react";
 import { services, slots } from "@/lib/data";
+import { createClient } from "@/lib/supabase/client";
 import { Brand } from "./public-shell";
 import { Button, Container, Status } from "./ui";
 
@@ -16,7 +17,7 @@ export function BookingPage() {
   const [time, setTime] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [booked, setBooked] = useState<string[]>(() => typeof window === "undefined" ? [] : JSON.parse(localStorage.getItem("demo-booked-slots") || "[]"));
+  const [booked, setBooked] = useState<string[]>([]);
   const currentService = useMemo(() => services.find((item) => item.name === service) || services[0], [service]);
   const slotKey = `${slots[selectedDay].full}-${time}`;
 
@@ -27,7 +28,7 @@ export function BookingPage() {
     const form = new FormData(event.currentTarget);
     const payload = { service, mode, date: slots[selectedDay].full, dateIso: slots[selectedDay].iso, time, ...Object.fromEntries(form.entries()) };
     try { await fetch("/api/bookings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }); } catch { /* demo fallback */ }
-    const next = [...booked, slotKey]; localStorage.setItem("demo-booked-slots", JSON.stringify(next)); localStorage.setItem("demo-last-booking", JSON.stringify(payload)); setBooked(next);
+    const next = [...booked, slotKey]; setBooked(next);
     setTimeout(() => { setLoading(false); setConfirmed(true); }, 500);
   }
 
@@ -40,11 +41,65 @@ export function BookingConfirmation({ service = "Valutazione iniziale", mode = "
   return <section className="confirmation-page"><Container><div className="confirmation-icon"><CheckCircle2 size={40} /></div><Status tone="success">Prenotazione confermata</Status><h1>Ci vediamo presto.</h1><p>Abbiamo inviato un riepilogo all’indirizzo indicato. Troverai l’appuntamento anche nella tua area cliente.</p><div className="confirmation-card"><div><small>Servizio</small><strong>{service}</strong></div><div><small>Data e ora</small><strong>{day}, {time}</strong></div><div><small>Luogo</small><strong>{mode}</strong></div><div><small>Codice prenotazione</small><strong>FC-DEMO-2048</strong></div></div><div className="confirmation-actions"><Button href="/cliente">Vai alla tua area</Button><Button href="/" variant="secondary">Torna alla home</Button></div><p className="small-note">Puoi modificare o annullare fino a 24 ore prima dalla tua area personale.</p></Container></section>;
 }
 
-export function AuthPage({ mode }: { mode: "login" | "register" | "recovery" }) {
+export function AuthPage({ mode }: { mode: "login" | "register" | "recovery" | "update" }) {
   const router = useRouter();
-  const [role, setRole] = useState<"client" | "admin">("client");
+  const searchParams = useSearchParams();
   const [sent, setSent] = useState(false);
-  function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); if (mode === "recovery") { setSent(true); return; } localStorage.setItem("demo-role", role); router.push(role === "admin" ? "/admin" : "/cliente"); }
-  const titles = { login: ["Bentornato.", "Accedi per gestire appuntamenti e percorso."], register: ["Attiva il tuo account.", "Usa l’invito ricevuto da Francesco per completare la registrazione."], recovery: ["Recupera l’accesso.", "Riceverai un link sicuro e a scadenza via email."] };
-  return <section className="auth-page"><div className="auth-visual"><Brand inverse /><div><span>Il tuo percorso, sempre con te.</span><blockquote>“La continuità nasce quando ogni passo è chiaro e sostenibile.”</blockquote></div><small>Area protetta · Dati cifrati · Europe/Rome</small></div><div className="auth-form-wrap"><Link className="auth-home" href="/"><ArrowLeft size={15} /> Torna al sito</Link><div className="auth-form"><span className="auth-icon">{mode === "recovery" ? <KeyRound /> : mode === "register" ? <UserRound /> : <LockKeyhole />}</span><h1>{titles[mode][0]}</h1><p>{titles[mode][1]}</p>{mode === "login" && <div className="role-tabs"><button className={role === "client" ? "active" : ""} onClick={() => setRole("client")}>Cliente</button><button className={role === "admin" ? "active" : ""} onClick={() => setRole("admin")}>Amministratore</button></div>}{sent ? <div className="auth-success"><Mail /><strong>Controlla la tua email</strong><p>Se l’indirizzo è registrato, riceverai le istruzioni tra pochi minuti.</p></div> : <form onSubmit={submit}>{mode === "register" && <label className="field"><span>Codice invito</span><input required placeholder="FC-XXXX-XXXX" /></label>}<label className="field"><span>Email</span><input required type="email" placeholder="nome@email.it" defaultValue={mode === "login" ? (role === "admin" ? "francesco.demo@example.it" : "sofia.demo@example.it") : ""} /></label>{mode !== "recovery" && <label className="field"><span>Password</span><input required type="password" defaultValue="Demo-2026!" /></label>}{mode === "register" && <label className="checkbox"><input type="checkbox" required /><span>Accetto privacy policy e termini del servizio.</span></label>}<button className="button button-primary full-button">{mode === "login" ? "Accedi" : mode === "register" ? "Attiva account" : "Invia link di recupero"}<ArrowRight size={17} /></button></form>}{mode === "login" && <><Link className="forgot-link" href="/recupera-password">Password dimenticata?</Link><div className="demo-note"><ShieldCheck size={17} /><p><strong>Accesso demo</strong><br />Seleziona un ruolo e accedi con i dati già compilati. Nessun dato è reale.</p></div></>}{mode !== "login" && <p className="auth-switch">Hai già un account? <Link href="/login">Accedi</Link></p>}</div></div></section>;
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(searchParams.get("error") || "");
+  const titles = {
+    login: ["Bentornato.", "Accedi per gestire appuntamenti e percorso."],
+    register: ["Crea il tuo account.", "Registrati e verifica l’email per accedere alla tua area riservata."],
+    recovery: ["Recupera l’accesso.", "Riceverai un link sicuro e a scadenza via email."],
+    update: ["Scegli una nuova password.", "Usa almeno 10 caratteri e una combinazione non riutilizzata altrove."],
+  };
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
+    const form = new FormData(event.currentTarget);
+    const email = String(form.get("email") || "").trim();
+    const password = String(form.get("password") || "");
+    const supabase = createClient();
+    try {
+      if (mode === "recovery") {
+        const { error: authError } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/auth/callback?next=/aggiorna-password` });
+        if (authError) throw authError;
+        setSent(true);
+        return;
+      }
+      if (mode === "update") {
+        if (password.length < 10) throw new Error("La password deve contenere almeno 10 caratteri.");
+        const { error: authError } = await supabase.auth.updateUser({ password });
+        if (authError) throw authError;
+        router.replace("/cliente");
+        router.refresh();
+        return;
+      }
+      if (mode === "register") {
+        if (password.length < 10) throw new Error("La password deve contenere almeno 10 caratteri.");
+        const { error: authError } = await supabase.auth.signUp({ email, password, options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/cliente`,
+          data: { first_name: String(form.get("firstName") || "").trim(), last_name: String(form.get("lastName") || "").trim() },
+        } });
+        if (authError) throw authError;
+        setSent(true);
+        return;
+      }
+      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      if (authError) throw authError;
+      const { data: profile } = await supabase.from("profiles").select("role,is_active").eq("id", data.user.id).single();
+      const requested = searchParams.get("next");
+      const safeNext = requested?.startsWith("/") && !requested.startsWith("//") ? requested : null;
+      router.replace(safeNext || (profile?.role === "admin" && profile.is_active ? "/admin" : "/cliente"));
+      router.refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Operazione non riuscita. Riprova.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return <section className="auth-page"><div className="auth-visual"><Brand inverse /><div><span>Il tuo percorso, sempre con te.</span><blockquote>“La continuità nasce quando ogni passo è chiaro e sostenibile.”</blockquote></div><small>Area protetta · Sessioni sicure · Europe/Rome</small></div><div className="auth-form-wrap"><Link className="auth-home" href="/"><ArrowLeft size={15} /> Torna al sito</Link><div className="auth-form"><span className="auth-icon">{mode === "recovery" ? <KeyRound /> : mode === "register" ? <UserRound /> : <LockKeyhole />}</span><h1>{titles[mode][0]}</h1><p>{titles[mode][1]}</p>{error && <div className="auth-success" role="alert"><AlertCircle /><strong>Controlla i dati</strong><p>{error}</p></div>}{sent ? <div className="auth-success"><Mail /><strong>Controlla la tua email</strong><p>{mode === "register" ? "Apri il link di verifica per attivare l’account." : "Se l’indirizzo è registrato, riceverai le istruzioni tra pochi minuti."}</p></div> : <form onSubmit={submit}>{mode === "register" && <div className="form-grid"><label className="field"><span>Nome</span><input name="firstName" required autoComplete="given-name" /></label><label className="field"><span>Cognome</span><input name="lastName" required autoComplete="family-name" /></label></div>}{mode !== "update" && <label className="field"><span>Email</span><input name="email" required type="email" autoComplete="email" placeholder="nome@email.it" /></label>}{mode !== "recovery" && <label className="field"><span>{mode === "update" ? "Nuova password" : "Password"}</span><input name="password" required type="password" minLength={10} autoComplete={mode === "login" ? "current-password" : "new-password"} /></label>}{mode === "register" && <label className="checkbox"><input type="checkbox" required /><span>Accetto <Link href="/privacy">privacy policy</Link> e <Link href="/termini">termini del servizio</Link>.</span></label>}<button className="button button-primary full-button" disabled={loading}>{loading ? "Attendi…" : mode === "login" ? "Accedi" : mode === "register" ? "Crea account" : mode === "update" ? "Aggiorna password" : "Invia link di recupero"}<ArrowRight size={17} /></button></form>}{mode === "login" && <><Link className="forgot-link" href="/recupera-password">Password dimenticata?</Link><p className="auth-switch">Non hai un account? <Link href="/registrazione">Registrati</Link></p><div className="demo-note"><ShieldCheck size={17} /><p><strong>Accesso protetto</strong><br />Il ruolo amministratore è verificato dal database e non è selezionabile dal browser.</p></div></>}{mode !== "login" && <p className="auth-switch">Hai già un account? <Link href="/login">Accedi</Link></p>}</div></div></section>;
 }

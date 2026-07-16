@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: francesco-crivello-pt
+    runtime: node
+    plan: free
+    region: frankfurt
+    autoDeploy: true
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build
+    startCommand: pnpm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 22.20.0
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        value: https://hzlfknqnwzwmljpesytx.supabase.co
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: NEXT_PUBLIC_SITE_URL
+        sync: false
+  - type: cron
+    name: francesco-crivello-notifications
+    runtime: node
+    schedule: "*/5 * * * *"
+    buildCommand: corepack enable && pnpm install --frozen-lockfile
+    startCommand: pnpm notifications:run
+    envVars:
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        value: https://hzlfknqnwzwmljpesytx.supabase.co
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: EMAIL_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: ADMIN_NOTIFICATION_EMAIL
+        sync: false

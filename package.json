@@ -6,10 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "notifications:run": "node scripts/process-notifications.mjs",
+    "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@supabase/ssr": "0.6.1",
     "@supabase/supabase-js": "^2.49.8",
     "lucide-react": "^0.468.0",
     "next": "^15.3.3",

@@ -4,7 +4,8 @@ import Link from "next/link";
 import { HomeIcon } from "lucide-react";
 import { PublicShell } from "./public-shell";
 import { AboutPage, FaqPage, Home, LegalPage, LocationPage, MethodPage, ServiceDetail, ServicesPage } from "./public-pages";
-import { AuthPage, BookingConfirmation, BookingPage } from "./booking-auth";
+import { AuthPage, BookingConfirmation } from "./booking-auth";
+import BookingPage from "./booking-live";
 import {
   AdminAvailability,
   AdminCalendar,
@@ -22,25 +23,27 @@ import {
   ClientProfile,
 } from "./dashboard-pages";
 import { Container } from "./ui";
+import { LiveAdminCalendar, LiveAdminClientDetail, LiveAdminClients, LiveAdminDashboard, LiveAdminRequests, LiveAdminAvailability, LiveAdminServices, LiveAnamnesisPage, LiveClientCalendar, LiveClientDashboard, LiveClientDocuments, LiveClientProfile } from "./live-portal-pages";
 
 export function SitePage({ route }: { route: string }) {
-  if (route === "/cliente") return <ClientDashboard />;
-  if (route === "/cliente/calendario") return <ClientCalendar />;
-  if (route === "/cliente/anamnesi") return <AnamnesisPage />;
-  if (route === "/cliente/documenti") return <ClientDocuments />;
-  if (route === "/cliente/profilo") return <ClientProfile />;
-  if (route === "/admin") return <AdminDashboard />;
-  if (route === "/admin/richieste") return <AdminRequests />;
-  if (route === "/admin/clienti") return <AdminClients />;
-  if (route.startsWith("/admin/clienti/")) return <AdminClientDetail />;
-  if (route === "/admin/calendario") return <AdminCalendar />;
-  if (route === "/admin/disponibilita") return <AdminAvailability />;
-  if (route === "/admin/servizi") return <AdminServices />;
+  if (route === "/cliente") return <LiveClientDashboard />;
+  if (route === "/cliente/calendario") return <LiveClientCalendar />;
+  if (route === "/cliente/anamnesi") return <LiveAnamnesisPage />;
+  if (route === "/cliente/documenti") return <LiveClientDocuments />;
+  if (route === "/cliente/profilo") return <LiveClientProfile />;
+  if (route === "/admin") return <LiveAdminDashboard />;
+  if (route === "/admin/richieste") return <LiveAdminRequests />;
+  if (route === "/admin/clienti") return <LiveAdminClients />;
+  if (route.startsWith("/admin/clienti/")) return <LiveAdminClientDetail />;
+  if (route === "/admin/calendario") return <LiveAdminCalendar />;
+  if (route === "/admin/disponibilita") return <LiveAdminAvailability />;
+  if (route === "/admin/servizi") return <LiveAdminServices />;
   if (route === "/admin/contenuti") return <AdminContent />;
   if (route === "/admin/impostazioni") return <AdminSettings />;
   if (route === "/login") return <AuthPage mode="login" />;
   if (route === "/registrazione") return <AuthPage mode="register" />;
   if (route === "/recupera-password") return <AuthPage mode="recovery" />;
+  if (route === "/aggiorna-password") return <AuthPage mode="update" />;
   if (route === "/prenota") return <PublicShell><BookingPage /></PublicShell>;
   if (route === "/prenotazione/conferma") return <PublicShell><BookingConfirmation /></PublicShell>;
 
