@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { AlertCircle, ArrowLeft, ArrowRight, CheckCircle2, KeyRound, LockKeyhole, Mail, ShieldCheck, UserRound } from "lucide-react";
+import { recordAuthDiagnostic, type AuthDiagnosticAction } from "@/lib/auth-diagnostics";
 import { createClient } from "@/lib/supabase/client";
 import { Brand } from "./public-shell";
 import { Button, Container, Status } from "./ui";
@@ -71,7 +72,7 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
   const searchParams = useSearchParams();
   const inFlight = useRef(false);
   const [sent, setSent] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<AuthFeedback | null>(() => {
     const message = searchParams.get("error");
     return message ? { title: "Operazione non riuscita", message } : null;
@@ -87,19 +88,23 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
     event.preventDefault();
     if (inFlight.current) return;
     inFlight.current = true;
-    setLoading(true);
+    setIsSubmitting(true);
     setFeedback(null);
     const form = new FormData(event.currentTarget);
     const email = String(form.get("email") || "").trim().toLowerCase();
     const password = String(form.get("password") || "");
     const supabase = createClient();
+    const action: AuthDiagnosticAction = mode === "recovery" ? "recovery" : mode;
+    const requestId = crypto.randomUUID();
 
     try {
+      await recordAuthDiagnostic(action, "start", requestId);
       if (mode === "recovery") {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/reset-password`,
+          redirectTo: new URL("/reset-password", window.location.origin).toString(),
         });
         if (error) throw error;
+        await recordAuthDiagnostic(action, "success", requestId);
         setSent(true);
         return;
       }
@@ -117,6 +122,7 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
           },
         });
         if (error) throw error;
+        await recordAuthDiagnostic(action, "success", requestId);
         setSent(true);
         return;
       }
@@ -126,24 +132,29 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
       const { data: profile } = await supabase.from("profiles").select("role,is_active").eq("id", data.user.id).single();
       const requested = searchParams.get("next");
       const safeNext = requested?.startsWith("/") && !requested.startsWith("//") ? requested : null;
+      await recordAuthDiagnostic(action, "success", requestId);
       router.replace(safeNext || (profile?.role === "admin" && profile.is_active ? "/mfa" : "/cliente"));
       router.refresh();
     } catch (cause) {
+      await recordAuthDiagnostic(action, "error", requestId, cause);
       setFeedback(authFeedback(cause, mode));
     } finally {
       inFlight.current = false;
-      setLoading(false);
+      setIsSubmitting(false);
     }
   }
 
-  return <AuthLayout><div className="auth-form"><span className="auth-icon">{mode === "recovery" ? <KeyRound /> : mode === "register" ? <UserRound /> : <LockKeyhole />}</span><h1>{titles[mode][0]}</h1><p>{titles[mode][1]}</p>{passwordUpdated && <div className="auth-success" role="status"><CheckCircle2 /><strong>Password aggiornata</strong><p>Ora puoi accedere con la nuova password.</p></div>}{feedback && <div className="auth-error" role="alert"><AlertCircle /><strong>{feedback.title}</strong><p>{feedback.message}</p></div>}{sent ? <div className="auth-success"><Mail /><strong>Controlla la tua email</strong><p>{mode === "register" ? "Apri il link di verifica per attivare l’account." : "Se l’indirizzo è registrato, riceverai le istruzioni tra pochi minuti."}</p></div> : <form onSubmit={submit}>{mode === "register" && <div className="form-grid"><label className="field"><span>Nome</span><input name="firstName" required autoComplete="given-name" /></label><label className="field"><span>Cognome</span><input name="lastName" required autoComplete="family-name" /></label></div>}<label className="field"><span>Email</span><input name="email" required type="email" autoComplete="email" inputMode="email" placeholder="nome@email.it" /></label>{mode !== "recovery" && <label className="field"><span>Password</span><input name="password" required type="password" minLength={10} autoComplete={mode === "login" ? "current-password" : "new-password"} /></label>}{mode === "register" && <label className="checkbox"><input type="checkbox" required /><span>Accetto <Link href="/privacy" target="_blank" rel="noopener noreferrer">privacy policy</Link> e <Link href="/termini" target="_blank" rel="noopener noreferrer">termini del servizio</Link>.</span></label>}<button className="button button-primary full-button" disabled={loading} aria-busy={loading}>{loading ? "Attendi…" : mode === "login" ? "Accedi" : mode === "register" ? "Crea account" : "Invia link di recupero"}<ArrowRight size={17} /></button></form>}{mode === "login" && <><Link className="forgot-link" href="/recupera-password">Password dimenticata?</Link><p className="auth-switch">Non hai un account? <Link href="/registrazione">Registrati</Link></p><div className="demo-note"><ShieldCheck size={17} /><p><strong>Accesso protetto</strong><br />Il ruolo amministratore è verificato dal database e non è selezionabile dal browser.</p></div></>}{mode !== "login" && <p className="auth-switch">Hai già un account? <Link href="/login">Accedi</Link></p>}</div></AuthLayout>;
+  return <AuthLayout><div className="auth-form"><span className="auth-icon">{mode === "recovery" ? <KeyRound /> : mode === "register" ? <UserRound /> : <LockKeyhole />}</span><h1>{titles[mode][0]}</h1><p>{titles[mode][1]}</p>{passwordUpdated && <div className="auth-success" role="status"><CheckCircle2 /><strong>Password aggiornata</strong><p>Ora puoi accedere con la nuova password.</p></div>}{feedback && <div className="auth-error" role="alert"><AlertCircle /><strong>{feedback.title}</strong><p>{feedback.message}</p></div>}{sent ? <div className="auth-success"><Mail /><strong>Controlla la tua email</strong><p>{mode === "register" ? "Apri il link di verifica per attivare l’account." : "Se l’indirizzo è registrato, riceverai le istruzioni tra pochi minuti."}</p></div> : <form onSubmit={submit}>{mode === "register" && <div className="form-grid"><label className="field"><span>Nome</span><input name="firstName" required autoComplete="given-name" /></label><label className="field"><span>Cognome</span><input name="lastName" required autoComplete="family-name" /></label></div>}<label className="field"><span>Email</span><input name="email" required type="email" autoComplete="email" inputMode="email" placeholder="nome@email.it" /></label>{mode !== "recovery" && <label className="field"><span>Password</span><input name="password" required type="password" minLength={10} autoComplete={mode === "login" ? "current-password" : "new-password"} /></label>}{mode === "register" && <label className="checkbox"><input type="checkbox" required /><span>Accetto <Link href="/privacy" target="_blank" rel="noopener noreferrer">privacy policy</Link> e <Link href="/termini" target="_blank" rel="noopener noreferrer">termini del servizio</Link>.</span></label>}<button className="button button-primary full-button" disabled={isSubmitting} aria-busy={isSubmitting}>{isSubmitting ? "Attendi…" : mode === "login" ? "Accedi" : mode === "register" ? "Crea account" : "Invia link di recupero"}<ArrowRight size={17} /></button></form>}{mode === "login" && <><Link className="forgot-link" href="/recupera-password">Password dimenticata?</Link><p className="auth-switch">Non hai un account? <Link href="/registrazione">Registrati</Link></p><div className="demo-note"><ShieldCheck size={17} /><p><strong>Accesso protetto</strong><br />Il ruolo amministratore è verificato dal database e non è selezionabile dal browser.</p></div></>}{mode !== "login" && <p className="auth-switch">Hai già un account? <Link href="/login">Accedi</Link></p>}</div></AuthLayout>;
 }
 
 export function ResetPasswordPage() {
   const router = useRouter();
   const inFlight = useRef(false);
+  const redirectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [ready, setReady] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [isPreparing, setIsPreparing] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [feedback, setFeedback] = useState<AuthFeedback | null>(null);
 
   useEffect(() => {
@@ -152,28 +163,56 @@ export function ResetPasswordPage() {
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       if (active && event === "PASSWORD_RECOVERY" && session) {
         setReady(true);
-        setLoading(false);
+        setIsPreparing(false);
       }
     });
 
     async function prepareRecovery() {
       try {
-        const params = new URLSearchParams(window.location.search);
+        const url = new URL(window.location.href);
+        const params = url.searchParams;
+        const hash = new URLSearchParams(url.hash.replace(/^#/, ""));
         if (params.get("error_description")) throw new Error("Il link di recupero non è valido o è scaduto.");
         const code = params.get("code");
-        if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
-          if (error) throw error;
-          window.history.replaceState({}, "", "/reset-password");
+        const tokenHash = params.get("token_hash");
+        const recoveryType = params.get("type") === "recovery" || hash.get("type") === "recovery";
+
+        let { data: current, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+
+        if (!current.session && code) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (exchangeError) {
+            // createBrowserClient può avere già consumato il codice PKCE: ricontrolla
+            // la sessione prima di considerare il link non valido.
+            const retry = await supabase.auth.getSession();
+            if (retry.error) throw retry.error;
+            if (!retry.data.session) throw exchangeError;
+            current = retry.data;
+          }
+        } else if (!current.session && tokenHash && recoveryType) {
+          const verified = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" });
+          if (verified.error) throw verified.error;
+        } else if (!current.session && hash.get("access_token") && hash.get("refresh_token") && recoveryType) {
+          const established = await supabase.auth.setSession({
+            access_token: hash.get("access_token")!,
+            refresh_token: hash.get("refresh_token")!,
+          });
+          if (established.error) throw established.error;
         }
+
         const { data, error } = await supabase.auth.getSession();
         if (error) throw error;
         if (!data.session) throw new Error("Il link di recupero non è valido o è scaduto. Richiedine uno nuovo.");
-        if (active) setReady(true);
+        window.history.replaceState({}, "", "/reset-password");
+        if (active) {
+          setReady(true);
+          setFeedback(null);
+        }
       } catch (cause) {
         if (active) setFeedback(authFeedback(cause, "reset"));
       } finally {
-        if (active) setLoading(false);
+        if (active) setIsPreparing(false);
       }
     }
 
@@ -181,6 +220,7 @@ export function ResetPasswordPage() {
     return () => {
       active = false;
       listener.subscription.unsubscribe();
+      if (redirectTimer.current) clearTimeout(redirectTimer.current);
     };
   }, []);
 
@@ -194,23 +234,31 @@ export function ResetPasswordPage() {
     if (password !== confirmation) return setFeedback({ title: "Le password non coincidono", message: "Controlla entrambi i campi e riprova." });
 
     inFlight.current = true;
-    setLoading(true);
+    setIsSubmitting(true);
     setFeedback(null);
     const supabase = createClient();
+    const requestId = crypto.randomUUID();
     try {
+      await recordAuthDiagnostic("password_update", "start", requestId);
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
+      await recordAuthDiagnostic("password_update", "success", requestId);
+      setSuccess(true);
+      setReady(false);
       await supabase.auth.signOut({ scope: "local" });
-      router.replace("/login?password=updated");
-      router.refresh();
+      redirectTimer.current = setTimeout(() => {
+        router.replace("/login?password=updated&next=/admin");
+        router.refresh();
+      }, 1500);
     } catch (cause) {
+      await recordAuthDiagnostic("password_update", "error", requestId, cause);
       setFeedback(authFeedback(cause, "reset"));
       inFlight.current = false;
-      setLoading(false);
+      setIsSubmitting(false);
     }
   }
 
-  return <AuthLayout><div className="auth-form"><span className="auth-icon"><KeyRound /></span><h1>Scegli una nuova password.</h1><p>Il link è temporaneo. La nuova password deve contenere almeno 10 caratteri.</p>{feedback && <div className="auth-error" role="alert"><AlertCircle /><strong>{feedback.title}</strong><p>{feedback.message}</p></div>}{loading && !ready ? <p>Verifica del link in corso…</p> : ready ? <form onSubmit={updatePassword}><label className="field"><span>Nuova password</span><input name="password" type="password" minLength={10} autoComplete="new-password" required /></label><label className="field"><span>Conferma nuova password</span><input name="passwordConfirmation" type="password" minLength={10} autoComplete="new-password" required /></label><button className="button button-primary full-button" disabled={loading} aria-busy={loading}>{loading ? "Aggiornamento…" : "Aggiorna password"}<ArrowRight size={17} /></button></form> : <Link className="button button-primary full-button" href="/recupera-password">Richiedi un nuovo link</Link>}</div></AuthLayout>;
+  return <AuthLayout><div className="auth-form"><span className="auth-icon"><KeyRound /></span><h1>Scegli una nuova password.</h1><p>Il link è temporaneo. La nuova password deve contenere almeno 10 caratteri.</p>{success && <div className="auth-success" role="status"><CheckCircle2 /><strong>Password aggiornata</strong><p>La modifica è stata salvata. Ora verrai riportato al login amministratore.</p></div>}{feedback && <div className="auth-error" role="alert"><AlertCircle /><strong>{feedback.title}</strong><p>{feedback.message}</p></div>}{isPreparing ? <p>Verifica del link in corso…</p> : ready && !success ? <form onSubmit={updatePassword}><label className="field"><span>Nuova password</span><input name="password" type="password" minLength={10} autoComplete="new-password" required /></label><label className="field"><span>Conferma nuova password</span><input name="passwordConfirmation" type="password" minLength={10} autoComplete="new-password" required /></label><button className="button button-primary full-button" disabled={isSubmitting} aria-busy={isSubmitting}>{isSubmitting ? "Aggiornamento…" : "Aggiorna password"}<ArrowRight size={17} /></button></form> : !success && <Link className="button button-primary full-button" href="/recupera-password">Richiedi un nuovo link</Link>}</div></AuthLayout>;
 }
 
 function AuthLayout({ children }: { children: React.ReactNode }) {

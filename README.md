@@ -69,33 +69,49 @@ Bucket creati dalla migrazione:
 
 I file privati usano il percorso `<auth.uid()>/<uuid>.<estensione>` e vengono scaricati con signed URL di 60 secondi.
 
-## Autenticazione e amministratore
+## Autenticazione e amministratori
 
 Registrazione, verifica email, login, logout, recupero e cambio password usano Supabase Auth con callback PKCE. Il recupero porta a `/reset-password`, scambia il codice temporaneo con una sessione, aggiorna la password e torna al login. `middleware.ts` aggiorna la sessione e protegge `/cliente/*` e `/admin/*`; il ruolo admin è verificato anche da RLS.
 
-Dopo avere creato manualmente l’account di Francesco in **Authentication → Users**, assegnare il ruolo con il suo UUID reale:
+La migrazione `20260717103000_authoritative_admin_allowlist.sql` limita il ruolo
+amministratore, lato database, ai soli account:
+
+- `francescopaolo.crivello96@gmail.com`
+- `giuseppegalatolo24@gmail.com`
+
+L’account viene promosso automaticamente quando Supabase Auth crea l’utente con
+uno dei due indirizzi. Per revocare un amministratore senza modificare il codice,
+eseguire nel SQL Editor:
 
 ```sql
-update public.profiles
-set role = 'admin', first_name = 'Francesco', last_name = 'Crivello'
-where id = 'UUID_REALE_DI_AUTH_USERS';
+update public.admin_allowlist
+set is_active = false
+where email = 'INDIRIZZO_AUTORIZZATO';
 ```
 
-Non esiste una registrazione pubblica amministratore. Per l’admin è raccomandato abilitare MFA TOTP dal dashboard Supabase.
+La revoca aggiorna immediatamente anche `profiles.role`; riattivare impostando
+`is_active = true`. Non esiste una registrazione pubblica amministratore e il
+middleware richiede MFA TOTP (AAL2) prima di accedere a `/admin`.
 
 URL Auth da autorizzare in **Authentication → URL Configuration**:
 
-- Site URL locale: `http://localhost:3000`
+- Site URL produzione: `https://francesco-crivello-pt.onrender.com`
+- Redirect produzione: `https://francesco-crivello-pt.onrender.com/**`
+- Redirect recupero produzione: `https://francesco-crivello-pt.onrender.com/reset-password`
 - Redirect locale: `http://localhost:3000/**`
-- Site URL produzione: `https://IL-TUO-SERVIZIO.onrender.com`
-- Redirect produzione: `https://IL-TUO-SERVIZIO.onrender.com/**`
+- Redirect recupero locale: `http://localhost:3000/reset-password`
 - Preview, se usate: `https://*.onrender.com/**`
 
-Il servizio SMTP integrato di Supabase è adatto solo allo sviluppo e applica
-limiti molto bassi. Per registrazioni e recuperi password affidabili in
-produzione configurare un SMTP personalizzato in **Authentication → SMTP
-Settings**. È una configurazione distinta dall'API usata per la notifica
-immediata delle prenotazioni.
+Ogni submit Auth emette nei log Render una coppia sicura
+`[auth-diagnostic] start` e `success/error` con un ID casuale. Non vengono mai registrati
+email, password, token o URL di recupero. Un solo `start` corrisponde a una sola
+azione dell’utente verso Supabase Auth.
+
+Il servizio SMTP integrato del progetto è attualmente limitato a **2 email/ora**:
+questo è il motivo di `Email rate limit exceeded`. Il client impedisce doppi
+submit, ma inviti, verifiche e recuperi condividono comunque quel limite. Non è
+stato attivato un provider esterno, come richiesto; attendere il ripristino della
+finestra prima di ripetere un test email.
 
 ## Build e deploy Render
 
