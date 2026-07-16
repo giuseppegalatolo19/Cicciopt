@@ -108,6 +108,7 @@ create table public.appointments (
   location_id uuid not null references public.locations(id) on delete restrict,
   starts_at timestamptz not null, ends_at timestamptz not null,
   buffer_minutes integer not null default 0 check (buffer_minutes between 0 and 120),
+  blocked_until timestamptz not null,
   status public.appointment_status not null default 'pending',
   guest_first_name text, guest_last_name text, guest_email citext, guest_phone text,
   client_notes text, admin_notes text, recurrence_group uuid, cancelled_at timestamptz,
@@ -116,9 +117,18 @@ create table public.appointments (
   check (starts_at < ends_at), check (client_id is not null or guest_email is not null),
   exclude using gist (
     location_id with =,
-    tstzrange(starts_at, ends_at + make_interval(mins => buffer_minutes), '[)') with &&
+    tstzrange(starts_at, blocked_until, '[)') with &&
   ) where (status in ('pending','confirmed'))
 );
+create or replace function public.set_appointment_blocked_until()
+returns trigger language plpgsql set search_path = public as $$
+begin
+  new.blocked_until := new.ends_at + new.buffer_minutes * interval '1 minute';
+  return new;
+end $$;
+create trigger appointments_blocked_until
+before insert or update of ends_at,buffer_minutes on public.appointments
+for each row execute function public.set_appointment_blocked_until();
 create index appointments_client_date_idx on public.appointments (client_id, starts_at desc);
 create index appointments_date_idx on public.appointments (starts_at, status);
 
