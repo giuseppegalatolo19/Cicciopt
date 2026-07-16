@@ -25,6 +25,6 @@ where l.slug='studio-forma' and not exists (
 );
 
 insert into public.site_content (content_key,value,is_published,published_at) values
-('home.hero','{"title":"Costruisci la tua forza. Con metodo.","body":"Allenamento personalizzato, metodo e supporto costante per risultati concreti e sostenibili."}',true,now()),
+('home.hero','{"eyebrow":"Personal trainer · Palermo & online","title":"Costruisci la tua forza.","highlight":"Con metodo.","body":"Allenamento personalizzato, metodo e supporto costante per risultati concreti e sostenibili.","primary":"Prenota una consulenza","secondary":"Scopri i servizi"}',true,now()),
 ('contact.primary','{"phone":"+39 000 000 0000","email":"ciao@francescocrivello.it"}',true,now())
 on conflict (content_key) do nothing;

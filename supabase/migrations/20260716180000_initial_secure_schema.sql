@@ -350,6 +350,19 @@ begin
   return v_anamnesis;
 end $$;
 
+create or replace function public.convert_inquiry_to_client(p_inquiry_id uuid)
+returns uuid language plpgsql security definer set search_path=public as $$
+declare v_inquiry public.inquiries%rowtype; v_client uuid;
+begin
+  if not public.is_admin() then raise exception 'forbidden'; end if;
+  select * into strict v_inquiry from public.inquiries where id=p_inquiry_id for update;
+  if v_inquiry.assigned_client_id is not null then return v_inquiry.assigned_client_id; end if;
+  insert into public.clients(invited_email,account_status,primary_goal,next_action)
+  values(v_inquiry.email,'invited',v_inquiry.primary_goal,'Inviare invito di registrazione') returning id into v_client;
+  update public.inquiries set status='converted',assigned_client_id=v_client where id=p_inquiry_id;
+  return v_client;
+end $$;
+
 -- RLS: negazione predefinita, accessi espliciti per proprietario o admin.
 alter table public.profiles enable row level security; alter table public.clients enable row level security;
 alter table public.locations enable row level security; alter table public.services enable row level security;
@@ -412,6 +425,7 @@ revoke all on function public.create_public_booking(uuid,uuid,timestamptz,text,t
 revoke all on function public.cancel_own_appointment(uuid,text) from public;
 revoke all on function public.reschedule_own_appointment(uuid,timestamptz) from public;
 revoke all on function public.save_anamnesis(jsonb,integer,boolean,jsonb) from public;
+revoke all on function public.convert_inquiry_to_client(uuid) from public;
 revoke all on function public.is_admin() from public;
 revoke all on function public.owns_client(uuid) from public;
 grant execute on function public.is_admin() to anon,authenticated;
@@ -422,6 +436,7 @@ grant execute on function public.create_public_booking(uuid,uuid,timestamptz,tex
 grant execute on function public.cancel_own_appointment(uuid,text) to authenticated;
 grant execute on function public.reschedule_own_appointment(uuid,timestamptz) to authenticated;
 grant execute on function public.save_anamnesis(jsonb,integer,boolean,jsonb) to authenticated;
+grant execute on function public.convert_inquiry_to_client(uuid) to authenticated;
 
 -- Storage: due bucket privati e uno pubblico solo per contenuti approvati.
 insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types) values

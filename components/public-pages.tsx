@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import {
   ArrowDown,
   ArrowRight,
@@ -31,8 +31,17 @@ import {
 } from "lucide-react";
 import { faqs, methodSteps, services, testimonials } from "@/lib/data";
 import { Button, CheckItem, Container, Eyebrow, SectionTitle } from "./ui";
+import { createClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 export function Home() {
+  const [hero, setHero] = useState({ eyebrow: "Personal trainer · Palermo & online", title: "Costruisci la tua forza.", highlight: "Con metodo.", body: "Allenamento personalizzato, metodo e supporto costante per costruire risultati concreti e sostenibili.", primary: "Prenota una consulenza", secondary: "Scopri i servizi" });
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+    createClient().from("site_content").select("value").eq("content_key", "home.hero").eq("is_published", true).maybeSingle().then(({ data }) => {
+      if (data?.value && typeof data.value === "object" && !Array.isArray(data.value)) setHero((current) => ({ ...current, ...(data.value as Partial<typeof current>) }));
+    });
+  }, []);
   return (
     <>
       <section className="hero">
@@ -40,10 +49,10 @@ export function Home() {
         <div className="hero-overlay" />
         <Container className="hero-content">
           <div className="hero-copy">
-            <Eyebrow tone="dark">Personal trainer · Palermo & online</Eyebrow>
-            <h1>Costruisci la tua forza.<br /><em>Con metodo.</em></h1>
-            <p>Allenamento personalizzato, metodo e supporto costante per costruire risultati concreti e sostenibili.</p>
-            <div className="hero-actions"><Button href="/prenota">Prenota una consulenza</Button><Button href="/servizi" variant="light">Scopri i servizi</Button></div>
+            <Eyebrow tone="dark">{hero.eyebrow}</Eyebrow>
+            <h1>{hero.title}<br /><em>{hero.highlight}</em></h1>
+            <p>{hero.body}</p>
+            <div className="hero-actions"><Button href="/prenota">{hero.primary}</Button><Button href="/servizi" variant="light">{hero.secondary}</Button></div>
             <div className="hero-trust"><span><ShieldCheck size={18} /> Percorso su misura</span><span><CalendarCheck size={18} /> Prenotazione semplice</span></div>
           </div>
         </Container>

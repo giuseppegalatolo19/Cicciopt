@@ -24,7 +24,7 @@ import {
   ClientProfile,
 } from "./dashboard-pages";
 import { Container } from "./ui";
-import { LiveAdminCalendar, LiveAdminClientDetail, LiveAdminClients, LiveAdminDashboard, LiveAdminRequests, LiveAdminAvailability, LiveAdminServices, LiveAnamnesisPage, LiveClientCalendar, LiveClientDashboard, LiveClientDocuments, LiveClientProfile } from "./live-portal-pages";
+import { LiveAdminCalendar, LiveAdminClientDetail, LiveAdminClients, LiveAdminContent, LiveAdminDashboard, LiveAdminRequests, LiveAdminAvailability, LiveAdminServices, LiveAnamnesisPage, LiveClientCalendar, LiveClientDashboard, LiveClientDocuments, LiveClientProfile } from "./live-portal-pages";
 
 export function SitePage({ route }: { route: string }) {
   if (route === "/cliente") return <LiveClientDashboard />;
@@ -39,7 +39,7 @@ export function SitePage({ route }: { route: string }) {
   if (route === "/admin/calendario") return <LiveAdminCalendar />;
   if (route === "/admin/disponibilita") return <LiveAdminAvailability />;
   if (route === "/admin/servizi") return <LiveAdminServices />;
-  if (route === "/admin/contenuti") return <AdminContent />;
+  if (route === "/admin/contenuti") return <LiveAdminContent />;
   if (route === "/admin/impostazioni") return <AdminSettings />;
   if (route === "/login") return <AuthPage mode="login" />;
   if (route === "/registrazione") return <AuthPage mode="register" />;

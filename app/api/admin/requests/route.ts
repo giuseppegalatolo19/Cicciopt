@@ -25,6 +25,11 @@ export async function PATCH(request: Request) {
   const body = await request.json().catch(() => null) as { id?: string; status?: string } | null;
   const allowed = ["new","to_contact","contacted","consultation_booked","converted","not_interested","archived"];
   if (!body?.id || !body.status || !allowed.includes(body.status)) return NextResponse.json({ error: "Stato non valido." }, { status: 400 });
+  if (body.status === "converted") {
+    const { error } = await supabase.rpc("convert_inquiry_to_client", { p_inquiry_id: body.id });
+    if (error) return NextResponse.json({ error: "Conversione non riuscita." }, { status: 400 });
+    return NextResponse.json({ ok: true });
+  }
   const { error } = await supabase.from("inquiries").update({ status: body.status }).eq("id", body.id);
   if (error) return NextResponse.json({ error: "Aggiornamento non riuscito." }, { status: 400 });
   return NextResponse.json({ ok: true });
