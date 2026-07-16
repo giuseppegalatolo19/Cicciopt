@@ -27,21 +27,28 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
-Opzionali, esclusivamente server-side per job futuri:
+Variabili server-side per le notifiche di prenotazione (nessuna deve avere il
+prefisso `NEXT_PUBLIC_`):
 
 ```env
 SUPABASE_SERVICE_ROLE_KEY=
 EMAIL_API_KEY=
-EMAIL_FROM="Francesco Crivello <appuntamenti@example.it>"
-ADMIN_NOTIFICATION_EMAIL=
+EMAIL_FROM="Francesco Crivello <prenotazioni@dominio-verificato.it>"
+ADMIN_NOTIFICATION_EMAIL=francescopaolo.crivello96@gmail.com
 CRON_SECRET=
 ```
+
+La prenotazione viene prima registrata su Supabase e solo dopo il server prova a
+inviare la notifica tramite l'API Resend. Se `EMAIL_API_KEY` o `EMAIL_FROM`
+mancano, l'appuntamento resta valido e la pagina di conferma comunica con
+precisione che l'email non è partita. `EMAIL_FROM` deve usare un mittente o un
+dominio verificato nel provider.
 
 I file `.env`, `.env.local` e `.env.*.local` sono ignorati da Git; `.env.example` è tracciato.
 
 ## Database e Storage
 
-La migrazione iniziale è [supabase/migrations/20260716180000_initial_secure_schema.sql](supabase/migrations/20260716180000_initial_secure_schema.sql). Crea profili, clienti, richieste, servizi, sedi, disponibilità, eccezioni, appuntamenti, anamnesi, risposte, documenti, consensi, note admin, notifiche, recensioni, contenuti, richieste GDPR e log attività.
+La migrazione iniziale è [supabase/migrations/20260716180000_initial_secure_schema.sql](supabase/migrations/20260716180000_initial_secure_schema.sql). Crea profili, clienti, richieste, servizi, modalità/luoghi, disponibilità, eccezioni, appuntamenti, anamnesi, risposte, documenti, consensi, note admin, notifiche, recensioni, contenuti, richieste GDPR e log attività. La migrazione [supabase/migrations/20260716223000_brand_and_delivery_modes.sql](supabase/migrations/20260716223000_brand_and_delivery_modes.sql) sostituisce la sede fissa con le modalità online, a domicilio e palestra del cliente e aggiorna il contenuto hero.
 
 Con Supabase CLI autenticata:
 
@@ -64,7 +71,7 @@ I file privati usano il percorso `<auth.uid()>/<uuid>.<estensione>` e vengono sc
 
 ## Autenticazione e amministratore
 
-Registrazione, verifica email, login, logout, recupero e cambio password usano Supabase Auth con callback PKCE. `middleware.ts` aggiorna la sessione e protegge `/cliente/*` e `/admin/*`; il ruolo admin è verificato anche da RLS.
+Registrazione, verifica email, login, logout, recupero e cambio password usano Supabase Auth con callback PKCE. Il recupero porta a `/reset-password`, scambia il codice temporaneo con una sessione, aggiorna la password e torna al login. `middleware.ts` aggiorna la sessione e protegge `/cliente/*` e `/admin/*`; il ruolo admin è verificato anche da RLS.
 
 Dopo avere creato manualmente l’account di Francesco in **Authentication → Users**, assegnare il ruolo con il suo UUID reale:
 
@@ -79,10 +86,16 @@ Non esiste una registrazione pubblica amministratore. Per l’admin è raccomand
 URL Auth da autorizzare in **Authentication → URL Configuration**:
 
 - Site URL locale: `http://localhost:3000`
-- Redirect locale: `http://localhost:3000/auth/callback`
+- Redirect locale: `http://localhost:3000/**`
 - Site URL produzione: `https://IL-TUO-SERVIZIO.onrender.com`
-- Redirect produzione: `https://IL-TUO-SERVIZIO.onrender.com/auth/callback`
-- Preview, se usate: `https://*.onrender.com/auth/callback`
+- Redirect produzione: `https://IL-TUO-SERVIZIO.onrender.com/**`
+- Preview, se usate: `https://*.onrender.com/**`
+
+Il servizio SMTP integrato di Supabase è adatto solo allo sviluppo e applica
+limiti molto bassi. Per registrazioni e recuperi password affidabili in
+produzione configurare un SMTP personalizzato in **Authentication → SMTP
+Settings**. È una configurazione distinta dall'API usata per la notifica
+immediata delle prenotazioni.
 
 ## Build e deploy Render
 
@@ -96,7 +109,10 @@ Publish directory: nessuna
 Health check: /api/health
 ```
 
-Su Render aggiungere `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` e `NEXT_PUBLIC_SITE_URL`. Non aggiungere `SUPABASE_SERVICE_ROLE_KEY` con prefisso `NEXT_PUBLIC_`.
+Su Render aggiungere `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+`NEXT_PUBLIC_SITE_URL`, `ADMIN_NOTIFICATION_EMAIL`, `EMAIL_API_KEY` e
+`EMAIL_FROM`. Le ultime tre sono server-side. Non aggiungere mai
+`SUPABASE_SERVICE_ROLE_KEY` con prefisso `NEXT_PUBLIC_`.
 
 ## Verifiche
 
@@ -113,8 +129,8 @@ La checklist funzionale è in [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md). Le verif
 | Pubblico | Cliente | Admin |
 | --- | --- | --- |
 | `/`, `/chi-sono`, `/servizi`, `/metodo` | `/cliente` | `/admin` |
-| `/sede-contatti`, `/faq`, `/prenota` | `/cliente/calendario` | `/admin/richieste` |
-| `/login`, `/registrazione`, recupero | `/cliente/anamnesi` | `/admin/clienti/[id]` |
+| `/contatti`, `/faq`, `/prenota` | `/cliente/calendario` | `/admin/richieste` |
+| `/login`, `/registrazione`, `/recupera-password`, `/reset-password` | `/cliente/anamnesi` | `/admin/clienti/[id]` |
 | privacy, cookie e termini | `/cliente/documenti`, `/cliente/profilo` | calendario, disponibilità, servizi, contenuti, impostazioni |
 
 ## Sicurezza e privacy
@@ -124,7 +140,7 @@ La checklist funzionale è in [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md). Le verif
 - RLS e funzioni `security definer` limitate applicano l’autorizzazione nel database.
 - Note admin e documenti sanitari non sono pubblici.
 - Le richieste pubbliche hanno validazione, honeypot e rate limiting applicativo. Per più istanze Render, sostituire il contatore in memoria con Redis/Upstash e aggiungere Turnstile.
-- Le notifiche vengono accodate in `notifications`. Lo script `pnpm notifications:run` le invia tramite Resend; può essere eseguito da un Render Cron Job separato (servizio a pagamento) ogni 5 minuti dopo aver configurato le variabili private. Non è incluso automaticamente nel Blueprint per evitare l’attivazione involontaria di costi.
+- La notifica amministratore della nuova prenotazione è tentata subito dal server dopo il commit sul database. Le conferme e i promemoria accodati in `notifications` restano disponibili per il worker `pnpm notifications:run`; il Blueprint non crea Cron Job a pagamento.
 - Privacy policy, consensi, conservazione e termini sono bozze da validare con il consulente legale/DPO prima del go-live.
 - Configurare backup/PITR, test di ripristino e MFA admin dal piano Supabase scelto.
 

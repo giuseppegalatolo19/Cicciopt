@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { HomeIcon } from "lucide-react";
 import { PublicShell } from "./public-shell";
-import { AboutPage, FaqPage, Home, LegalPage, LocationPage, MethodPage, ServiceDetail, ServicesPage } from "./public-pages";
-import { AuthPage, BookingConfirmation } from "./booking-auth";
+import { AboutPage, ContactPage, FaqPage, Home, LegalPage, MethodPage, ServiceDetail, ServicesPage } from "./public-pages";
+import { AuthPage, BookingConfirmation, ResetPasswordPage } from "./booking-auth";
 import BookingPage from "./booking-live";
 import { MfaPage } from "./mfa-page";
 import {
@@ -44,7 +44,7 @@ export function SitePage({ route }: { route: string }) {
   if (route === "/login") return <AuthPage mode="login" />;
   if (route === "/registrazione") return <AuthPage mode="register" />;
   if (route === "/recupera-password") return <AuthPage mode="recovery" />;
-  if (route === "/aggiorna-password") return <AuthPage mode="update" />;
+  if (route === "/reset-password" || route === "/aggiorna-password") return <ResetPasswordPage />;
   if (route === "/mfa") return <MfaPage />;
   if (route === "/prenota") return <PublicShell><BookingPage /></PublicShell>;
   if (route === "/prenotazione/conferma") return <PublicShell><BookingConfirmation /></PublicShell>;
@@ -55,7 +55,7 @@ export function SitePage({ route }: { route: string }) {
   else if (route === "/servizi") page = <ServicesPage />;
   else if (route.startsWith("/servizi/")) page = <ServiceDetail slug={route.split("/")[2]} />;
   else if (route === "/metodo") page = <MethodPage />;
-  else if (route === "/sede-contatti") page = <LocationPage />;
+  else if (route === "/contatti" || route === "/sede-contatti") page = <ContactPage />;
   else if (route === "/faq") page = <FaqPage />;
   else if (route === "/privacy") page = <LegalPage type="privacy" />;
   else if (route === "/cookie-policy") page = <LegalPage type="cookie" />;

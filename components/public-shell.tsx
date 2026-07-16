@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Facebook, Instagram, LockKeyhole, Menu, X } from "lucide-react";
@@ -10,8 +11,7 @@ import { Button, Container } from "./ui";
 export function Brand({ inverse = false }: { inverse?: boolean }) {
   return (
     <Link className={`brand ${inverse ? "brand-inverse" : ""}`} href="/" aria-label="Francesco Crivello, home">
-      <span className="brand-mark">FC</span>
-      <span><strong>Francesco Crivello</strong><small>Personal Trainer</small></span>
+      <span className="brand-logo"><Image src="/brand/francesco-crivello-logo.jpeg" alt="" fill sizes="220px" /></span>
     </Link>
   );
 }
@@ -41,8 +41,8 @@ export function Footer() {
         <div className="footer-top">
           <div><Brand inverse /><p>Allenamento personalizzato, metodo e supporto costante per costruire risultati concreti e sostenibili.</p><div className="socials"><a href="#" aria-label="Instagram"><Instagram size={19} /></a><a href="#" aria-label="Facebook"><Facebook size={19} /></a></div></div>
           <div><h3>Esplora</h3><Link href="/chi-sono">Chi sono</Link><Link href="/servizi">Servizi</Link><Link href="/metodo">Il metodo</Link><Link href="/faq">FAQ</Link></div>
-          <div><h3>Contatti</h3><p>+39 000 000 0000</p><p>ciao@francescocrivello.it</p><p>Studio Forma<br />Via Esempio 24, Palermo</p></div>
-          <div><h3>Area personale</h3><Link href="/login">Accedi</Link><Link href="/registrazione">Attiva account</Link><Link href="/prenota">Prenota una sessione</Link><Link href="/sede-contatti">Richiedi informazioni</Link></div>
+          <div><h3>Contatti</h3><p>+39 000 000 0000</p><p>ciao@francescocrivello.it</p><p>Online, a domicilio o nella palestra del cliente, previo accordo.</p></div>
+          <div><h3>Area personale</h3><Link href="/login">Accedi</Link><Link href="/registrazione">Attiva account</Link><Link href="/prenota">Prenota una sessione</Link><Link href="/contatti">Richiedi informazioni</Link></div>
         </div>
         <div className="footer-bottom"><span>© 2026 Francesco Crivello · P. IVA [da inserire]</span><div><Link href="/privacy">Privacy</Link><Link href="/cookie-policy">Cookie</Link><Link href="/termini">Termini e prenotazioni</Link><button onClick={() => localStorage.removeItem("cookie-choice")}>Gestisci cookie</button></div></div>
       </Container>

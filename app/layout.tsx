@@ -10,12 +10,12 @@ export const metadata: Metadata = {
     description: "Un percorso di allenamento costruito intorno a te.",
     type: "website",
     locale: "it_IT",
-    images: ["/images/francesco-hero.png"],
+    images: ["/brand/francesco-crivello-hero.jpeg"],
   },
   robots: { index: true, follow: true },
 };
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#102a2b" };
+export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#171c1f" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (

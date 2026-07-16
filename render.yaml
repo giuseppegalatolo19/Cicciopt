@@ -17,3 +17,9 @@ services:
         sync: false
       - key: NEXT_PUBLIC_SITE_URL
         sync: false
+      - key: ADMIN_NOTIFICATION_EMAIL
+        value: francescopaolo.crivello96@gmail.com
+      - key: EMAIL_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false

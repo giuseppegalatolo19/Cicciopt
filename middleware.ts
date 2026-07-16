@@ -67,5 +67,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/cliente/:path*", "/admin/:path*", "/mfa", "/login", "/registrazione", "/recupera-password", "/aggiorna-password"],
+  matcher: ["/cliente/:path*", "/admin/:path*", "/mfa", "/login", "/registrazione", "/recupera-password", "/reset-password", "/aggiorna-password"],
 };

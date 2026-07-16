@@ -1,10 +1,13 @@
 -- Clearly fictional demo content. Do not use real client or health data.
-insert into public.locations (name, slug, address, city, description, parking, accessibility)
-values ('Studio Forma','studio-forma','Via Esempio 24','Palermo','Ambiente demo riservato e attrezzato.','Parcheggio nelle vicinanze.','Ingresso a piano terra.')
+insert into public.locations (name, slug, mode, description)
+values ('Palestra del cliente','client-gym','in_person','Allenamento nella palestra utilizzata dal cliente, previo accordo con la struttura.')
 on conflict (slug) do nothing;
 
 insert into public.locations (name, slug, mode, description)
-values ('Online','online','online','Videochiamata protetta.') on conflict (slug) do nothing;
+values ('Online','online','online','Coaching, programmazione e check in videochiamata.') on conflict (slug) do nothing;
+
+insert into public.locations (name, slug, mode, description)
+values ('A domicilio','home','home','Sessione presso il domicilio del cliente, con organizzazione concordata.') on conflict (slug) do nothing;
 
 insert into public.services (name,slug,short_description,full_description,duration_minutes,buffer_minutes,price_cents,manual_approval,max_participants) values
 ('Personal training individuale','personal-training','Percorso individuale su misura.','Contenuto demo modificabile.',55,15,5500,false,1),
@@ -15,16 +18,16 @@ on conflict (slug) do nothing;
 
 insert into public.service_locations (service_id, location_id)
 select s.id,l.id from public.services s cross join public.locations l
-where (l.slug = 'studio-forma' and s.slug <> 'coaching-online') or (l.slug = 'online' and s.slug = 'coaching-online')
+where l.slug in ('client-gym','online','home')
 on conflict do nothing;
 
 insert into public.availability_rules (location_id,iso_weekday,start_time,end_time)
 select l.id,d,'08:00','20:00' from public.locations l cross join generate_series(1,5) d
-where l.slug='studio-forma' and not exists (
+where l.slug in ('client-gym','online','home') and not exists (
   select 1 from public.availability_rules ar where ar.location_id=l.id and ar.iso_weekday=d and ar.service_id is null
 );
 
 insert into public.site_content (content_key,value,is_published,published_at) values
-('home.hero','{"eyebrow":"Personal trainer · Palermo & online","title":"Costruisci la tua forza.","highlight":"Con metodo.","body":"Allenamento personalizzato, metodo e supporto costante per risultati concreti e sostenibili.","primary":"Prenota una consulenza","secondary":"Scopri i servizi"}',true,now()),
+('home.hero','{"eyebrow":"Personal Trainer · Online e in presenza","title":"Prenditi cura di te,","highlight":"un allenamento alla volta.","body":"Allenamento personalizzato, metodo e supporto costante per risultati concreti e sostenibili.","primary":"Prenota una consulenza","secondary":"Scopri i servizi"}',true,now()),
 ('contact.primary','{"phone":"+39 000 000 0000","email":"ciao@francescocrivello.it"}',true,now())
 on conflict (content_key) do nothing;

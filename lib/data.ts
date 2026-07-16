@@ -18,8 +18,7 @@ export const services = [
     name: "Personal training individuale",
     short: "Un percorso costruito su obiettivi, disponibilità e livello di partenza.",
     duration: "55 min",
-    mode: "In studio",
-    price: "da €55",
+    mode: "A domicilio / palestra cliente",
     icon: Dumbbell,
   },
   {
@@ -27,8 +26,7 @@ export const services = [
     name: "Allenamento in coppia",
     short: "Metodo personalizzato e motivazione condivisa, senza perdere attenzione tecnica.",
     duration: "60 min",
-    mode: "In studio",
-    price: "da €35 / persona",
+    mode: "A domicilio / palestra cliente",
     icon: Users,
   },
   {
@@ -36,8 +34,7 @@ export const services = [
     name: "Ricomposizione corporea",
     short: "Allenamento progressivo per migliorare composizione, energia e abitudini.",
     duration: "Percorso 8–12 sett.",
-    mode: "Ibrido",
-    price: "Su valutazione",
+    mode: "Online / in presenza",
     icon: Scale,
   },
   {
@@ -45,8 +42,7 @@ export const services = [
     name: "Forza e massa muscolare",
     short: "Programmazione misurabile, tecnica solida e carichi adeguati al tuo livello.",
     duration: "55 min",
-    mode: "In studio",
-    price: "da €55",
+    mode: "Palestra del cliente",
     icon: BicepsFlexed,
   },
   {
@@ -54,8 +50,7 @@ export const services = [
     name: "Preparazione atletica",
     short: "Capacità condizionali e gesti utili allo sport, con progressioni sostenibili.",
     duration: "60 min",
-    mode: "Studio / outdoor",
-    price: "Su valutazione",
+    mode: "Palestra cliente / outdoor",
     icon: Activity,
   },
   {
@@ -63,8 +58,7 @@ export const services = [
     name: "Mobilità e funzionalità",
     short: "Muoversi meglio nella vita e nell’allenamento con un lavoro graduale e mirato.",
     duration: "45 min",
-    mode: "In studio / online",
-    price: "da €45",
+    mode: "Online / a domicilio",
     icon: Move3D,
   },
   {
@@ -73,7 +67,6 @@ export const services = [
     short: "Una scheda chiara, spiegata e aggiornata sulla base dei tuoi progressi.",
     duration: "4 settimane",
     mode: "Online",
-    price: "da €79",
     icon: CalendarDays,
   },
   {
@@ -82,7 +75,6 @@ export const services = [
     short: "Programma, check periodici e supporto per allenarti con autonomia e continuità.",
     duration: "Mensile",
     mode: "Online",
-    price: "da €119 / mese",
     icon: Laptop,
   },
   {
@@ -90,8 +82,7 @@ export const services = [
     name: "Valutazione iniziale",
     short: "Colloquio, anamnesi e test di base per definire una partenza consapevole.",
     duration: "75 min",
-    mode: "In studio",
-    price: "€65",
+    mode: "Online / in presenza",
     icon: HeartPulse,
   },
   {
@@ -99,11 +90,10 @@ export const services = [
     name: "Monitoraggio progressi",
     short: "Verifiche periodiche per leggere i dati e adattare il programma senza fretta.",
     duration: "30 min",
-    mode: "Studio / online",
-    price: "Incluso nei percorsi",
+    mode: "Online / in presenza",
     icon: TrendingUp,
   },
-];
+].map((service) => ({ ...service, price: "" }));
 
 export const methodSteps = [
   ["01", "Primo contatto", "Raccontami cosa vuoi migliorare e quali sono le tue esigenze."],
@@ -136,7 +126,7 @@ export const testimonials = [
 
 export const faqs = [
   ["È necessaria esperienza in palestra?", "No. Il percorso parte dal tuo livello e ogni esercizio viene spiegato e adattato."],
-  ["Come si svolge la prima consulenza?", "È un colloquio di circa 30 minuti, online o in studio, per capire esigenze, obiettivi e fattibilità del percorso."],
+  ["Come si svolge la prima consulenza?", "È un colloquio di circa 30 minuti, online o nella modalità concordata, per capire esigenze, obiettivi e fattibilità del percorso."],
   ["Quanto dura una sessione?", "La maggior parte delle sessioni dura 55–60 minuti. Durata e buffer sono sempre indicati in fase di prenotazione."],
   ["È possibile allenarsi online?", "Sì. Sono disponibili programmazione e coaching online con check periodici."],
   ["Posso modificare o annullare una prenotazione?", "Sì, dall’area cliente fino a 24 ore prima. Oltre tale limite è necessario contattare Francesco."],
@@ -149,7 +139,7 @@ export const navLinks = [
   ["Chi sono", "/chi-sono"],
   ["Servizi", "/servizi"],
   ["Metodo", "/metodo"],
-  ["Sede", "/sede-contatti"],
+  ["Contatti", "/contatti"],
   ["FAQ", "/faq"],
 ];
 

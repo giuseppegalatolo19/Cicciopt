@@ -7,27 +7,23 @@ import {
   ArrowDown,
   ArrowRight,
   Award,
-  Building2,
   CalendarCheck,
-  Car,
   Check,
   CheckCircle2,
   ChevronDown,
-  Clock3,
+  Dumbbell,
   HeartHandshake,
+  House,
   Instagram,
+  Laptop,
   Mail,
-  Map,
-  MapPin,
   MessageCircle,
-  Navigation,
   Phone,
   Quote,
   ShieldCheck,
   Sparkles,
   Star,
   Target,
-  Users,
 } from "lucide-react";
 import { faqs, methodSteps, services, testimonials } from "@/lib/data";
 import { Button, CheckItem, Container, Eyebrow, SectionTitle } from "./ui";
@@ -35,7 +31,7 @@ import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 export function Home() {
-  const [hero, setHero] = useState({ eyebrow: "Personal trainer · Palermo & online", title: "Costruisci la tua forza.", highlight: "Con metodo.", body: "Allenamento personalizzato, metodo e supporto costante per costruire risultati concreti e sostenibili.", primary: "Prenota una consulenza", secondary: "Scopri i servizi" });
+  const [hero, setHero] = useState({ eyebrow: "Personal Trainer · Online e in presenza", title: "Prenditi cura di te,", highlight: "un allenamento alla volta.", body: "Allenamento personalizzato, metodo e supporto costante per costruire risultati concreti e sostenibili.", primary: "Prenota una consulenza", secondary: "Scopri i servizi" });
   useEffect(() => {
     if (!isSupabaseConfigured()) return;
     createClient().from("site_content").select("value").eq("content_key", "home.hero").eq("is_published", true).maybeSingle().then(({ data }) => {
@@ -44,9 +40,8 @@ export function Home() {
   }, []);
   return (
     <>
-      <section className="hero">
-        <Image className="hero-image" src="/images/francesco-hero.png" alt="Personal trainer che segue con attenzione l’esecuzione di un esercizio" fill priority sizes="100vw" />
-        <div className="hero-overlay" />
+      <section className="hero hero-branded">
+        <div className="hero-media"><Image className="hero-image" src="/brand/francesco-crivello-hero.jpeg" alt="Francesco Crivello, Personal Trainer e Chinesiologo" fill priority sizes="(max-width: 800px) 100vw, 52vw" /></div>
         <Container className="hero-content">
           <div className="hero-copy">
             <Eyebrow tone="dark">{hero.eyebrow}</Eyebrow>
@@ -82,13 +77,8 @@ export function Home() {
 
       <MethodSection />
 
-      <section className="section location-section">
-        <Container>
-          <div className="location-card">
-            <div className="location-visual"><div className="studio-placeholder"><Building2 size={44} /><span>Foto della struttura</span><small>segnaposto modificabile da admin</small></div><div className="location-badge"><MapPin size={20} /><span><small>Allenati a</small><strong>Studio Forma</strong></span></div></div>
-            <div className="location-copy"><Eyebrow>La sede</Eyebrow><h2>Uno spazio pensato per allenarti <em>con calma.</em></h2><p>Uno studio riservato, luminoso e attrezzato per lavorare con attenzione, senza confusione e senza attese.</p><div className="location-features"><span><MapPin size={18} /> Via Esempio 24, Palermo</span><span><Clock3 size={18} /> Lun–Ven · 07:30–20:30</span><span><Car size={18} /> Parcheggio nelle vicinanze</span><span><Users size={18} /> Accesso su appuntamento</span></div><div className="button-row"><Button href="/sede-contatti">Scopri la sede</Button><a className="map-link" href="https://maps.google.com" target="_blank" rel="noreferrer">Apri su Maps <Navigation size={15} /></a></div></div>
-          </div>
-        </Container>
+      <section className="section training-modes-section">
+        <Container><SectionTitle eyebrow="Dove ci alleniamo" title={<>Il percorso viene da te,<br /><em>senza una sede fissa.</em></>} body="Scegliamo insieme la modalità più adatta: online, a domicilio oppure nella palestra che già frequenti." /><div className="training-mode-grid"><article><Laptop /><h3>Online</h3><p>Programmazione, coaching e check periodici per allenarti con continuità ovunque ti trovi.</p></article><article><House /><h3>A domicilio</h3><p>Sessioni concordate negli spazi disponibili, con organizzazione e attrezzatura definite in anticipo.</p></article><article><Dumbbell /><h3>Palestra del cliente</h3><p>Allenamenti presso la palestra che utilizzi abitualmente, previo accordo con la struttura.</p></article></div><div className="training-modes-action"><Button href="/contatti">Parliamo della modalità più adatta</Button></div></Container>
       </section>
 
       <section className="section testimonials-section">
@@ -112,7 +102,7 @@ export function ServicesPage() {
 export function ServiceDetail({ slug }: { slug: string }) {
   const service = services.find((item) => item.slug === slug) || services[0];
   const Icon = service.icon;
-  return <><section className="detail-hero"><Container><Link className="back-link" href="/servizi">← Tutti i servizi</Link><div className="detail-hero-grid"><div><span className="large-service-icon"><Icon size={30} /></span><Eyebrow tone="dark">Percorso personalizzato</Eyebrow><h1>{service.name}</h1><p>{service.short} La proposta definitiva viene concordata dopo un colloquio conoscitivo.</p><div className="hero-actions"><Button href="/prenota">Prenota ora</Button><Button href="/sede-contatti" variant="light">Richiedi informazioni</Button></div></div><div className="detail-summary"><div><small>Durata</small><strong>{service.duration}</strong></div><div><small>Modalità</small><strong>{service.mode}</strong></div><div><small>Investimento</small><strong>{service.price}</strong></div><div><small>Prima di iniziare</small><strong>Colloquio + anamnesi</strong></div></div></div></Container></section><section className="section"><Container className="content-narrow"><SectionTitle eyebrow="Come funziona" title="Un percorso chiaro, dall’inizio." body="Questi contenuti sono modificabili dalla dashboard amministrativa." /><div className="detail-columns"><div><h3>Per chi è indicato</h3><CheckItem>Vuoi essere seguito con attenzione tecnica</CheckItem><CheckItem>Cerchi una programmazione sostenibile</CheckItem><CheckItem>Preferisci obiettivi concreti e verificabili</CheckItem><CheckItem>Vuoi allenarti con maggiore sicurezza</CheckItem></div><div><h3>Cosa include</h3><CheckItem>Colloquio e valutazione iniziale</CheckItem><CheckItem>Programmazione personalizzata</CheckItem><CheckItem>Monitoraggio dei progressi</CheckItem><CheckItem>Aggiornamenti periodici del percorso</CheckItem></div></div></Container></section><ContactBand /></>;
+  return <><section className="detail-hero"><Container><Link className="back-link" href="/servizi">← Tutti i servizi</Link><div className="detail-hero-grid"><div><span className="large-service-icon"><Icon size={30} /></span><Eyebrow tone="dark">Percorso personalizzato</Eyebrow><h1>{service.name}</h1><p>{service.short} La proposta definitiva viene concordata dopo un colloquio conoscitivo.</p><div className="hero-actions"><Button href="/prenota">Prenota ora</Button><Button href="/contatti" variant="light">Richiedi informazioni</Button></div></div><div className="detail-summary"><div><small>Durata</small><strong>{service.duration}</strong></div><div><small>Modalità</small><strong>{service.mode}</strong></div><div><small>Prima di iniziare</small><strong>Colloquio + anamnesi</strong></div></div></div></Container></section><section className="section"><Container className="content-narrow"><SectionTitle eyebrow="Come funziona" title="Un percorso chiaro, dall’inizio." body="Questi contenuti sono modificabili dalla dashboard amministrativa." /><div className="detail-columns"><div><h3>Per chi è indicato</h3><CheckItem>Vuoi essere seguito con attenzione tecnica</CheckItem><CheckItem>Cerchi una programmazione sostenibile</CheckItem><CheckItem>Preferisci obiettivi concreti e verificabili</CheckItem><CheckItem>Vuoi allenarti con maggiore sicurezza</CheckItem></div><div><h3>Cosa include</h3><CheckItem>Colloquio e valutazione iniziale</CheckItem><CheckItem>Programmazione personalizzata</CheckItem><CheckItem>Monitoraggio dei progressi</CheckItem><CheckItem>Aggiornamenti periodici del percorso</CheckItem></div></div></Container></section><ContactBand /></>;
 }
 
 export function MethodSection() {
@@ -124,15 +114,15 @@ export function MethodPage() {
 }
 
 export function AboutPage() {
-  return <><section className="about-hero"><Container><div className="about-photo"><Image src="/images/francesco-hero.png" alt="Francesco Crivello durante una sessione" fill sizes="(max-width: 800px) 100vw, 50vw" /></div><div><Eyebrow>Chi sono</Eyebrow><h1>Competenza, ascolto<br />e un metodo che <em>si adatta.</em></h1><p>Sono Francesco Crivello, Personal Trainer. Credo in un allenamento costruito con cura: abbastanza sfidante da farti crescere, abbastanza realistico da diventare parte della tua vita.</p><Button href="/prenota">Conosciamoci</Button></div></Container></section><section className="section"><Container><div className="about-grid"><div><SectionTitle eyebrow="Il profilo" title="Formazione e pratica, al servizio della persona." /><p className="large-copy">[Testo modificabile] Inserire qui la presentazione professionale, il percorso formativo e le esperienze lavorative di Francesco.</p></div><div className="credentials"><article><Award /><div><h3>Formazione</h3><p>[Laurea, diploma o percorso formativo da inserire]</p></div></article><article><ShieldCheck /><div><h3>Certificazioni</h3><p>[Certificazioni professionali da inserire e verificare]</p></div></article><article><Target /><div><h3>Specializzazioni</h3><p>Forza, ricomposizione, mobilità e preparazione atletica.</p></div></article><article><HeartHandshake /><div><h3>Persone seguite</h3><p>Principianti, sportivi amatoriali e persone che riprendono ad allenarsi.</p></div></article></div></div></Container></section><section className="philosophy"><Container><Sparkles /><blockquote>“Non inseguo scorciatoie. Costruiamo capacità, fiducia e abitudini che possano restare.”</blockquote><span>— Filosofia di allenamento, testo modificabile</span></Container></section><ContactBand /></>;
+  return <><section className="about-hero"><Container><div className="about-photo"><Image src="/brand/francesco-crivello-hero.jpeg" alt="Francesco Crivello, Personal Trainer e Chinesiologo" fill sizes="(max-width: 800px) 100vw, 50vw" /></div><div><Eyebrow>Chi sono</Eyebrow><h1>Competenza, ascolto<br />e un metodo che <em>si adatta.</em></h1><p>Sono Francesco Crivello, Personal Trainer. Credo in un allenamento costruito con cura: abbastanza sfidante da farti crescere, abbastanza realistico da diventare parte della tua vita.</p><Button href="/prenota">Conosciamoci</Button></div></Container></section><section className="section"><Container><div className="about-grid"><div><SectionTitle eyebrow="Il profilo" title="Formazione e pratica, al servizio della persona." /><p className="large-copy">[Testo modificabile] Inserire qui la presentazione professionale, il percorso formativo e le esperienze lavorative di Francesco.</p></div><div className="credentials"><article><Award /><div><h3>Formazione</h3><p>[Laurea, diploma o percorso formativo da inserire]</p></div></article><article><ShieldCheck /><div><h3>Certificazioni</h3><p>[Certificazioni professionali da inserire e verificare]</p></div></article><article><Target /><div><h3>Specializzazioni</h3><p>Forza, ricomposizione, mobilità e preparazione atletica.</p></div></article><article><HeartHandshake /><div><h3>Persone seguite</h3><p>Principianti, sportivi amatoriali e persone che riprendono ad allenarsi.</p></div></article></div></div></Container></section><section className="philosophy"><Container><Sparkles /><blockquote>“Non inseguo scorciatoie. Costruiamo capacità, fiducia e abitudini che possano restare.”</blockquote><span>— Filosofia di allenamento, testo modificabile</span></Container></section><ContactBand /></>;
 }
 
-export function LocationPage() {
-  return <><PageHero eyebrow="Sede & contatti" title={<>Il tuo spazio per<br /><em>allenarti bene.</em></>} body="Una sede riservata a Palermo e percorsi online per lavorare con continuità, ovunque tu sia." /><section className="section"><Container><div className="location-detail-grid"><div className="map-placeholder"><div className="map-grid" /><span><MapPin size={28} /></span><div className="map-label"><strong>Studio Forma</strong><small>Via Esempio 24, Palermo</small></div></div><div><Eyebrow>Studio principale</Eyebrow><h2>Studio Forma</h2><p className="large-copy">[Descrizione modificabile] Ambiente luminoso e riservato, con area pesi, zona funzionale e spazio dedicato alla valutazione.</p><div className="info-list"><span><MapPin /> <b>Indirizzo</b><em>Via Esempio 24, Palermo</em></span><span><Clock3 /> <b>Orari</b><em>Lun–Ven, 07:30–20:30</em></span><span><Car /> <b>Parcheggio</b><em>Strisce libere nelle vicinanze</em></span><span><Building2 /> <b>Accessibilità</b><em>Ingresso a piano terra</em></span></div><a className="button button-primary" href="https://maps.google.com" target="_blank" rel="noreferrer">Apri su Google Maps <Navigation size={16} /></a></div></div></Container></section><section className="section muted-section"><Container><div className="equipment-grid"><div><h3>Attrezzature</h3><p>Rack, bilancieri, manubri, cavi, kettlebell, panche e piccoli attrezzi.</p></div><div><h3>Altre modalità</h3><p>Coaching online e, su disponibilità, sessioni outdoor o a domicilio.</p></div><div><h3>Come arrivare</h3><p>[Indicazioni con mezzi pubblici e riferimenti locali da completare.]</p></div></div></Container></section><ContactForm /></>;
+export function ContactPage() {
+  return <><PageHero eyebrow="Contatti e modalità" title={<>Allenati dove è<br /><em>più utile per te.</em></>} body="Percorsi online, sessioni a domicilio o allenamenti presso la palestra che già utilizzi, sempre previo accordo." /><section className="section"><Container><div className="training-mode-grid training-mode-grid-page"><article><Laptop /><h2>Online</h2><p>Coaching, programmazione e check in videochiamata per allenarti con autonomia e continuità.</p></article><article><House /><h2>A domicilio</h2><p>Definiamo insieme spazio, attrezzatura e organizzazione necessaria prima della sessione.</p></article><article><Dumbbell /><h2>Palestra del cliente</h2><p>Francesco può seguirti nella palestra che frequenti, compatibilmente con le regole della struttura.</p></article></div></Container></section><ContactForm /></>;
 }
 
 export function FaqPage() {
-  return <><PageHero eyebrow="Domande frequenti" title={<>Prima di iniziare,<br /><em>tutto più chiaro.</em></>} body="Le risposte alle domande più comuni. Se non trovi ciò che cerchi, scrivimi." /><section className="section"><Container className="faq-wrap"><div className="faq-list">{faqs.map(([q,a], index) => <Faq key={q} question={q} answer={a} defaultOpen={index === 0} />)}</div><aside className="faq-aside"><MessageCircle size={26} /><h3>Hai un’altra domanda?</h3><p>Scrivimi: ti risponderò con tutte le informazioni utili, senza impegno.</p><Button href="/sede-contatti">Contattami</Button></aside></Container></section></>;
+  return <><PageHero eyebrow="Domande frequenti" title={<>Prima di iniziare,<br /><em>tutto più chiaro.</em></>} body="Le risposte alle domande più comuni. Se non trovi ciò che cerchi, scrivimi." /><section className="section"><Container className="faq-wrap"><div className="faq-list">{faqs.map(([q,a], index) => <Faq key={q} question={q} answer={a} defaultOpen={index === 0} />)}</div><aside className="faq-aside"><MessageCircle size={26} /><h3>Hai un’altra domanda?</h3><p>Scrivimi: ti risponderò con tutte le informazioni utili, senza impegno.</p><Button href="/contatti">Contattami</Button></aside></Container></section></>;
 }
 
 function Faq({ question, answer, defaultOpen = false }: { question: string; answer: string; defaultOpen?: boolean }) {
@@ -162,7 +152,7 @@ export function ContactForm() {
       setError(cause instanceof Error ? cause.message : "Connessione non disponibile. Riprova.");
     } finally { setLoading(false); }
   }
-  return <section className="section contact-section" id="contatti"><Container><div><Eyebrow>Parliamone</Eyebrow><h2>Raccontami da dove vuoi partire.</h2><p>Compila il modulo: riceverai una conferma e ti ricontatterò per capire insieme il passo successivo.</p><div className="direct-contacts"><a href="tel:+390000000000"><Phone /> +39 000 000 0000</a><a href="mailto:ciao@francescocrivello.it"><Mail /> ciao@francescocrivello.it</a><a href="#"><Instagram /> @francescocrivello.pt</a></div></div>{sent ? <div className="form-success"><CheckCircle2 size={42} /><h3>Richiesta inviata</h3><p>Grazie! La richiesta è stata registrata come “Nuova”.</p><button onClick={() => setSent(false)} className="button button-secondary">Invia un’altra richiesta</button></div> : <form className="contact-form" onSubmit={submit}>{error && <div className="legal-notice" role="alert"><ShieldCheck /><p>{error}</p></div>}<label className="field" aria-hidden="true" style={{ position: "absolute", left: "-10000px" }}><span>Sito web</span><input name="website" tabIndex={-1} autoComplete="off" /></label><div className="form-grid"><Field label="Nome" name="firstName" required /><Field label="Cognome" name="lastName" required /><Field label="Email" name="email" type="email" required /><Field label="Telefono" name="phone" type="tel" required /><Select label="Servizio di interesse" name="service" options={services.slice(0,5).map(s => s.name)} /><Select label="Obiettivo principale" name="goal" options={["Benessere generale", "Forza", "Ricomposizione corporea", "Mobilità", "Preparazione sportiva"]} /><Select label="Modalità preferita" name="mode" options={["In studio", "Online", "Ibrida", "Da definire"]} /><Select label="Fascia oraria" name="time" options={["Mattina", "Pausa pranzo", "Pomeriggio", "Sera"]} /></div><label className="field"><span>Messaggio</span><textarea name="message" rows={4} maxLength={2000} placeholder="Racconta brevemente cosa vorresti migliorare…" /></label><label className="checkbox"><input type="checkbox" name="privacy" required /><span>Ho letto la <Link href="/privacy">privacy policy</Link> e acconsento al trattamento dei dati.</span></label><label className="checkbox"><input type="checkbox" name="contactConsent" required /><span>Acconsento a essere ricontattato in merito a questa richiesta.</span></label><button className="button button-primary full-button" disabled={loading}>{loading ? "Invio in corso…" : "Invia la richiesta"}<ArrowRight size={17} /></button></form>}</Container></section>;
+  return <section className="section contact-section" id="contatti"><Container><div><Eyebrow>Parliamone</Eyebrow><h2>Raccontami da dove vuoi partire.</h2><p>Compila il modulo: riceverai una conferma e ti ricontatterò per capire insieme il passo successivo.</p><div className="direct-contacts"><a href="tel:+390000000000"><Phone /> +39 000 000 0000</a><a href="mailto:ciao@francescocrivello.it"><Mail /> ciao@francescocrivello.it</a><a href="#"><Instagram /> @francescocrivello.pt</a></div></div>{sent ? <div className="form-success"><CheckCircle2 size={42} /><h3>Richiesta inviata</h3><p>Grazie! La richiesta è stata registrata come “Nuova”.</p><button onClick={() => setSent(false)} className="button button-secondary">Invia un’altra richiesta</button></div> : <form className="contact-form" onSubmit={submit}>{error && <div className="legal-notice" role="alert"><ShieldCheck /><p>{error}</p></div>}<label className="field" aria-hidden="true" style={{ position: "absolute", left: "-10000px" }}><span>Sito web</span><input name="website" tabIndex={-1} autoComplete="off" /></label><div className="form-grid"><Field label="Nome" name="firstName" required /><Field label="Cognome" name="lastName" required /><Field label="Email" name="email" type="email" required /><Field label="Telefono" name="phone" type="tel" required /><Select label="Servizio di interesse" name="service" options={services.slice(0,5).map(s => s.name)} /><Select label="Obiettivo principale" name="goal" options={["Benessere generale", "Forza", "Ricomposizione corporea", "Mobilità", "Preparazione sportiva"]} /><Select label="Modalità preferita" name="mode" options={["Online", "A domicilio", "Palestra del cliente", "Da definire"]} /><Select label="Fascia oraria" name="time" options={["Mattina", "Pausa pranzo", "Pomeriggio", "Sera"]} /></div><label className="field"><span>Messaggio</span><textarea name="message" rows={4} maxLength={2000} placeholder="Racconta brevemente cosa vorresti migliorare…" /></label><label className="checkbox"><input type="checkbox" name="privacy" required /><span>Ho letto la <Link href="/privacy" target="_blank" rel="noopener noreferrer">privacy policy</Link> e acconsento al trattamento dei dati.</span></label><label className="checkbox"><input type="checkbox" name="contactConsent" required /><span>Acconsento a essere ricontattato in merito a questa richiesta.</span></label><button className="button button-primary full-button" disabled={loading}>{loading ? "Invio in corso…" : "Invia la richiesta"}<ArrowRight size={17} /></button></form>}</Container></section>;
 }
 
 export function Field({ label, name, type = "text", required = false, defaultValue, placeholder }: { label: string; name: string; type?: string; required?: boolean; defaultValue?: string; placeholder?: string }) {
@@ -174,7 +164,7 @@ export function Select({ label, name, options }: { label: string; name: string; 
 }
 
 export function ContactBand() {
-  return <section className="contact-band"><Container><div><small>Non sai quale servizio scegliere?</small><h2>Partiamo da una conversazione.</h2></div><Button href="/sede-contatti">Raccontami i tuoi obiettivi</Button></Container></section>;
+  return <section className="contact-band"><Container><div><small>Non sai quale servizio scegliere?</small><h2>Partiamo da una conversazione.</h2></div><Button href="/contatti">Raccontami i tuoi obiettivi</Button></Container></section>;
 }
 
 export function LegalPage({ type }: { type: "privacy" | "cookie" | "terms" }) {
