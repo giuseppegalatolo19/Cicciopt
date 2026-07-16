@@ -124,7 +124,7 @@ La checklist funzionale è in [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md). Le verif
 - RLS e funzioni `security definer` limitate applicano l’autorizzazione nel database.
 - Note admin e documenti sanitari non sono pubblici.
 - Le richieste pubbliche hanno validazione, honeypot e rate limiting applicativo. Per più istanze Render, sostituire il contatore in memoria con Redis/Upstash e aggiungere Turnstile.
-- Le notifiche vengono accodate in `notifications`; il Cron Job definito in `render.yaml` le invia tramite Resend ogni 5 minuti. Configurare le cinque variabili private del job prima di abilitarlo.
+- Le notifiche vengono accodate in `notifications`. Lo script `pnpm notifications:run` le invia tramite Resend; può essere eseguito da un Render Cron Job separato (servizio a pagamento) ogni 5 minuti dopo aver configurato le variabili private. Non è incluso automaticamente nel Blueprint per evitare l’attivazione involontaria di costi.
 - Privacy policy, consensi, conservazione e termini sono bozze da validare con il consulente legale/DPO prima del go-live.
 - Configurare backup/PITR, test di ripristino e MFA admin dal piano Supabase scelto.
 
