@@ -113,6 +113,40 @@ submit, ma inviti, verifiche e recuperi condividono comunque quel limite. Non è
 stato attivato un provider esterno, come richiesto; attendere il ripristino della
 finestra prima di ripetere un test email.
 
+La predisposizione per un SMTP esterno è descritta in
+[docs/SUPABASE_SMTP.md](docs/SUPABASE_SMTP.md). Le variabili `SMTP_*` elencate in
+`.env.example` sono soltanto un promemoria dei campi del dashboard Supabase: non
+devono essere configurate nel browser né pubblicate su Render. Il cambio password
+degli utenti già autenticati usa direttamente `supabase.auth.updateUser` e non
+consuma email.
+
+## Workflow amministrativi e prenotazione ospite
+
+La migrazione `20260717130000_admin_workflows_and_guest_claims.sql` aggiunge senza
+rimuovere dati:
+
+- dettaglio e gestione persistente di richieste e prenotazioni;
+- campi anagrafici per clienti manuali separati dagli account Auth;
+- modalità, icona e ordine dei servizi;
+- relazione tra richiesta e appuntamento;
+- token monouso, casuale e con scadenza per collegare una prenotazione ospite.
+
+La prenotazione ospite viene sempre salvata prima della notifica email. Il token di
+collegamento non compare nell’URL e viene conservato per due ore in un cookie
+`HttpOnly`, `SameSite=Lax`. La funzione database `claim_guest_booking` associa il
+record soltanto dopo login e verifica della stessa email usata nella prenotazione.
+La mancata creazione dell’account non cancella né reinvia la prenotazione.
+
+I servizi pubblici, il modulo di contatto, il modulo di prenotazione e
+`/admin/servizi` usano la tabella `services` come fonte unica. Il campo storico
+`price_cents` resta nel database per compatibilità ma non viene letto o mostrato
+dall’interfaccia.
+
+Il CMS in `/admin/contenuti` salva solo sezioni e campi allowlistati come testo
+semplice. Non accetta HTML o JavaScript arbitrario. Le pagine pubbliche eseguono
+query aggregate per le chiavi necessarie e usano fallback versionati nel codice se
+Supabase non è disponibile.
+
 ## Build e deploy Render
 
 Il repository include `render.yaml`. Configurazione corretta:

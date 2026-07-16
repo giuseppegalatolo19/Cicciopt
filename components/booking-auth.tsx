@@ -18,6 +18,8 @@ export function BookingConfirmation({
   time = "",
   bookingCode,
   notificationStatus = "skipped",
+  claimAvailable = false,
+  contact,
 }: {
   service?: string;
   mode?: string;
@@ -25,6 +27,8 @@ export function BookingConfirmation({
   time?: string;
   bookingCode?: string;
   notificationStatus?: NotificationStatus;
+  claimAvailable?: boolean;
+  contact?: { firstName:string; lastName:string; email:string; phone:string };
 }) {
   const notificationCopy = notificationStatus === "sent"
     ? "La prenotazione è stata registrata e Francesco ha ricevuto la notifica email."
@@ -32,7 +36,8 @@ export function BookingConfirmation({
       ? "La prenotazione è stata registrata correttamente. La notifica email non è partita, ma l’appuntamento è già visibile nella dashboard di Francesco."
       : "La prenotazione è stata registrata correttamente.";
 
-  return <section className="confirmation-page"><Container><div className="confirmation-icon"><CheckCircle2 size={40} /></div><Status tone="success">Prenotazione registrata</Status><h1>Richiesta completata.</h1><p>{notificationCopy}</p><div className="confirmation-card"><div><small>Servizio</small><strong>{service}</strong></div><div><small>Data e ora</small><strong>{day}{time ? `, ${time}` : ""}</strong></div><div><small>Modalità</small><strong>{mode}</strong></div>{bookingCode && <div><small>Codice prenotazione</small><strong>{bookingCode}</strong></div>}</div><div className="confirmation-actions"><Button href="/cliente">Vai alla tua area</Button><Button href="/" variant="secondary">Torna alla home</Button></div><p className="small-note">Puoi modificare o annullare entro i limiti indicati nel regolamento prenotazioni.</p></Container></section>;
+  const prepareAccount = () => { if (contact) sessionStorage.setItem("fc-account-prefill", JSON.stringify(contact)); };
+  return <section className="confirmation-page"><Container><div className="confirmation-icon"><CheckCircle2 size={40} /></div><Status tone="success">Prenotazione registrata</Status><h1>Richiesta completata.</h1><p>{notificationCopy}</p><div className="confirmation-card"><div><small>Servizio</small><strong>{service}</strong></div><div><small>Data e ora</small><strong>{day}{time ? `, ${time}` : ""}</strong></div><div><small>Modalità</small><strong>{mode}</strong></div>{bookingCode && <div><small>Codice prenotazione</small><strong>{bookingCode}</strong></div>}</div>{claimAvailable&&<div className="account-invite"><h2>Gestisci tutto dalla tua area</h2><p>Crea un account per seguire lo stato della prenotazione, modificare i tuoi dati e gestire più comodamente le richieste future.</p><div className="confirmation-actions"><Link className="button button-primary" href="/registrazione?booking=1&next=/cliente/calendario?claim=1" onClick={prepareAccount}>Crea un account</Link><Link className="button button-secondary" href="/login?booking=1&next=/cliente/calendario?claim=1" onClick={prepareAccount}>Ho già un account</Link></div></div>}<div className="confirmation-actions"><Button href="/" variant="secondary">Continua senza account</Button></div><p className="small-note">La creazione dell’account è facoltativa. La richiesta resta registrata anche se chiudi questa pagina.</p></Container></section>;
 }
 
 type AuthMode = "login" | "register" | "recovery";
@@ -73,6 +78,7 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
   const inFlight = useRef(false);
   const [sent, setSent] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [prefill, setPrefill] = useState({ firstName:"", lastName:"", email:"", phone:"" });
   const [feedback, setFeedback] = useState<AuthFeedback | null>(() => {
     const message = searchParams.get("error");
     return message ? { title: "Operazione non riuscita", message } : null;
@@ -83,6 +89,10 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
     register: ["Crea il tuo account.", "Registrati e verifica l’email per accedere alla tua area riservata."],
     recovery: ["Recupera l’accesso.", "Riceverai un link sicuro e a scadenza via email."],
   };
+  useEffect(() => {
+    if (searchParams.get("booking") !== "1") return;
+    try { const stored=JSON.parse(sessionStorage.getItem("fc-account-prefill")||"{}"); setPrefill({firstName:String(stored.firstName||""),lastName:String(stored.lastName||""),email:String(stored.email||""),phone:String(stored.phone||"")}); } catch { /* temporary prefill is optional */ }
+  }, [searchParams]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -110,14 +120,17 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
       }
       if (mode === "register") {
         if (password.length < 10) throw new Error("La password deve contenere almeno 10 caratteri.");
+        const requested = searchParams.get("next");
+        const safeNext = requested?.startsWith("/") && !requested.startsWith("//") ? requested : "/cliente";
         const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback?next=/cliente`,
+            emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}`,
             data: {
               first_name: String(form.get("firstName") || "").trim(),
               last_name: String(form.get("lastName") || "").trim(),
+              phone: String(form.get("phone") || "").trim(),
             },
           },
         });
@@ -144,7 +157,7 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
     }
   }
 
-  return <AuthLayout><div className="auth-form"><span className="auth-icon">{mode === "recovery" ? <KeyRound /> : mode === "register" ? <UserRound /> : <LockKeyhole />}</span><h1>{titles[mode][0]}</h1><p>{titles[mode][1]}</p>{passwordUpdated && <div className="auth-success" role="status"><CheckCircle2 /><strong>Password aggiornata</strong><p>Ora puoi accedere con la nuova password.</p></div>}{feedback && <div className="auth-error" role="alert"><AlertCircle /><strong>{feedback.title}</strong><p>{feedback.message}</p></div>}{sent ? <div className="auth-success"><Mail /><strong>Controlla la tua email</strong><p>{mode === "register" ? "Apri il link di verifica per attivare l’account." : "Se l’indirizzo è registrato, riceverai le istruzioni tra pochi minuti."}</p></div> : <form onSubmit={submit}>{mode === "register" && <div className="form-grid"><label className="field"><span>Nome</span><input name="firstName" required autoComplete="given-name" /></label><label className="field"><span>Cognome</span><input name="lastName" required autoComplete="family-name" /></label></div>}<label className="field"><span>Email</span><input name="email" required type="email" autoComplete="email" inputMode="email" placeholder="nome@email.it" /></label>{mode !== "recovery" && <label className="field"><span>Password</span><input name="password" required type="password" minLength={10} autoComplete={mode === "login" ? "current-password" : "new-password"} /></label>}{mode === "register" && <label className="checkbox"><input type="checkbox" required /><span>Accetto <Link href="/privacy" target="_blank" rel="noopener noreferrer">privacy policy</Link> e <Link href="/termini" target="_blank" rel="noopener noreferrer">termini del servizio</Link>.</span></label>}<button className="button button-primary full-button" disabled={isSubmitting} aria-busy={isSubmitting}>{isSubmitting ? "Attendi…" : mode === "login" ? "Accedi" : mode === "register" ? "Crea account" : "Invia link di recupero"}<ArrowRight size={17} /></button></form>}{mode === "login" && <><Link className="forgot-link" href="/recupera-password">Password dimenticata?</Link><p className="auth-switch">Non hai un account? <Link href="/registrazione">Registrati</Link></p><div className="demo-note"><ShieldCheck size={17} /><p><strong>Accesso protetto</strong><br />Il ruolo amministratore è verificato dal database e non è selezionabile dal browser.</p></div></>}{mode !== "login" && <p className="auth-switch">Hai già un account? <Link href="/login">Accedi</Link></p>}</div></AuthLayout>;
+  return <AuthLayout><div className="auth-form"><span className="auth-icon">{mode === "recovery" ? <KeyRound /> : mode === "register" ? <UserRound /> : <LockKeyhole />}</span><h1>{titles[mode][0]}</h1><p>{titles[mode][1]}</p>{passwordUpdated && <div className="auth-success" role="status"><CheckCircle2 /><strong>Password aggiornata</strong><p>Ora puoi accedere con la nuova password.</p></div>}{feedback && <div className="auth-error" role="alert"><AlertCircle /><strong>{feedback.title}</strong><p>{feedback.message}</p></div>}{sent ? <div className="auth-success"><Mail /><strong>Controlla la tua email</strong><p>{mode === "register" ? "Apri il link di verifica per attivare l’account. La prenotazione verrà collegata solo dopo la verifica dell’email." : "Se l’indirizzo è registrato, riceverai le istruzioni tra pochi minuti."}</p></div> : <form onSubmit={submit}>{mode === "register" && <div className="form-grid"><label className="field"><span>Nome</span><input name="firstName" required autoComplete="given-name" defaultValue={prefill.firstName}/></label><label className="field"><span>Cognome</span><input name="lastName" required autoComplete="family-name" defaultValue={prefill.lastName}/></label></div>}<label className="field"><span>Email</span><input name="email" required type="email" autoComplete="email" inputMode="email" placeholder="nome@email.it" defaultValue={prefill.email}/></label>{mode === "register"&&<label className="field"><span>Telefono (facoltativo)</span><input name="phone" type="tel" autoComplete="tel" defaultValue={prefill.phone}/></label>}{mode !== "recovery" && <label className="field"><span>Password</span><input name="password" required type="password" minLength={10} autoComplete={mode === "login" ? "current-password" : "new-password"} /></label>}{mode === "register" && <label className="checkbox"><input type="checkbox" required /><span>Accetto <Link href="/privacy" target="_blank" rel="noopener noreferrer">privacy policy</Link> e <Link href="/termini" target="_blank" rel="noopener noreferrer">termini del servizio</Link>.</span></label>}<button className="button button-primary full-button" disabled={isSubmitting} aria-busy={isSubmitting}>{isSubmitting ? "Attendi…" : mode === "login" ? "Accedi" : mode === "register" ? "Crea account" : "Invia link di recupero"}<ArrowRight size={17} /></button></form>}{mode === "login" && <><Link className="forgot-link" href="/recupera-password">Password dimenticata?</Link><p className="auth-switch">Non hai un account? <Link href="/registrazione">Registrati</Link></p><div className="demo-note"><ShieldCheck size={17} /><p><strong>Accesso protetto</strong><br />Il ruolo amministratore è verificato dal database e non è selezionabile dal browser.</p></div></>}{mode !== "login" && <p className="auth-switch">Hai già un account? <Link href="/login">Accedi</Link></p>}</div></AuthLayout>;
 }
 
 export function ResetPasswordPage() {

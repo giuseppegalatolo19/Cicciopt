@@ -25,6 +25,9 @@ import {
 } from "./dashboard-pages";
 import { Container } from "./ui";
 import { LiveAdminCalendar, LiveAdminClientDetail, LiveAdminClients, LiveAdminContent, LiveAdminDashboard, LiveAdminRequests, LiveAdminAvailability, LiveAdminServices, LiveAnamnesisPage, LiveClientCalendar, LiveClientDashboard, LiveClientDocuments, LiveClientProfile } from "./live-portal-pages";
+import { AdminClientsManager, AdminRequestsManager, AdminServicesManager } from "./admin-management";
+import { AdminAccountSettings } from "./account-security";
+import { ContentManager } from "./content-manager";
 
 export function SitePage({ route }: { route: string }) {
   if (route === "/cliente") return <LiveClientDashboard />;
@@ -33,14 +36,15 @@ export function SitePage({ route }: { route: string }) {
   if (route === "/cliente/documenti") return <LiveClientDocuments />;
   if (route === "/cliente/profilo") return <LiveClientProfile />;
   if (route === "/admin") return <LiveAdminDashboard />;
-  if (route === "/admin/richieste") return <LiveAdminRequests />;
-  if (route === "/admin/clienti") return <LiveAdminClients />;
+  if (route === "/admin/richieste") return <AdminRequestsManager />;
+  if (route.startsWith("/admin/richieste/")) return <AdminRequestsManager requestKey={route.split("/").pop()} />;
+  if (route === "/admin/clienti") return <AdminClientsManager />;
   if (route.startsWith("/admin/clienti/")) return <LiveAdminClientDetail />;
   if (route === "/admin/calendario") return <LiveAdminCalendar />;
   if (route === "/admin/disponibilita") return <LiveAdminAvailability />;
-  if (route === "/admin/servizi") return <LiveAdminServices />;
-  if (route === "/admin/contenuti") return <LiveAdminContent />;
-  if (route === "/admin/impostazioni") return <AdminSettings />;
+  if (route === "/admin/servizi") return <AdminServicesManager />;
+  if (route === "/admin/contenuti") return <ContentManager />;
+  if (route === "/admin/impostazioni") return <AdminAccountSettings />;
   if (route === "/login") return <AuthPage mode="login" />;
   if (route === "/registrazione") return <AuthPage mode="register" />;
   if (route === "/recupera-password") return <AuthPage mode="recovery" />;

@@ -33,6 +33,11 @@ export async function POST(request: Request) {
     p_submit: Boolean(body.submit),
     p_consents: body.consents ?? [],
   });
-  if (error) return NextResponse.json({ error: "Salvataggio non riuscito." }, { status: 400 });
+  if (error) {
+    // Solo codice tecnico: nessun payload, risposta sanitaria o token viene scritto nei log.
+    console.error("anamnesis_save_failed", { code: error.code, hint: error.hint ?? null });
+    const message = error.message.includes("invalid_anamnesis") ? "La sezione inviata non è valida." : error.message.includes("not_authenticated") ? "La sessione è scaduta. Accedi di nuovo." : "Salvataggio non riuscito. Riprova; i dati già salvati restano disponibili.";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
   return NextResponse.json({ ok: true, anamnesisId: data });
 }

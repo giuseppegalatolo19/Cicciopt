@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
+import type { LucideIcon } from "lucide-react";
 import {
   ArrowDown,
   ArrowRight,
@@ -30,14 +31,23 @@ import { Button, CheckItem, Container, Eyebrow, SectionTitle } from "./ui";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
-export function Home() {
-  const [hero, setHero] = useState({ eyebrow: "Personal Trainer · Online e in presenza", title: "Prenditi cura di te,", highlight: "un allenamento alla volta.", body: "Allenamento personalizzato, metodo e supporto costante per costruire risultati concreti e sostenibili.", primary: "Prenota una consulenza", secondary: "Scopri i servizi" });
+type PublicService = { slug: string; name: string; short: string; full?: string; duration: string; mode: string; icon: LucideIcon };
+const fallbackServices: PublicService[] = services;
+function usePublicServices() {
+  const [catalog, setCatalog] = useState<PublicService[]>(fallbackServices);
   useEffect(() => {
     if (!isSupabaseConfigured()) return;
-    createClient().from("site_content").select("value").eq("content_key", "home.hero").eq("is_published", true).maybeSingle().then(({ data }) => {
-      if (data?.value && typeof data.value === "object" && !Array.isArray(data.value)) setHero((current) => ({ ...current, ...(data.value as Partial<typeof current>) }));
+    (createClient().from("services") as any).select("slug,name,short_description,full_description,duration_minutes,mode,icon_name").eq("is_active", true).order("display_order").order("name").then(({ data }: { data: any[] | null }) => {
+      if (data?.length) setCatalog(data.map((item) => ({ slug: item.slug, name: item.name, short: item.short_description, full: item.full_description, duration: `${item.duration_minutes} min`, mode: item.mode || "Online / domicilio / palestra del cliente", icon: item.icon_name === "laptop" ? Laptop : item.icon_name === "house" ? House : Dumbbell })));
     });
   }, []);
+  return catalog;
+}
+function usePublicContent(defaults:Record<string,Record<string,string>>){const [content,setContent]=useState(defaults);const keys=Object.keys(defaults).join("|");useEffect(()=>{if(!isSupabaseConfigured())return;(createClient().from("site_content") as any).select("content_key,value").in("content_key",Object.keys(defaults)).eq("is_published",true).then(({data}:{data:any[]|null})=>{if(data?.length)setContent(current=>{const next={...current};for(const row of data)if(row.value&&typeof row.value==="object"&&!Array.isArray(row.value))next[row.content_key]={...next[row.content_key],...row.value};return next})})},[keys]);return content}
+
+export function Home() {
+  const catalog = usePublicServices();
+  const content=usePublicContent({"home.hero":{eyebrow:"Personal Trainer · Online e in presenza",title:"Prenditi cura di te,",highlight:"un allenamento alla volta.",body:"Allenamento personalizzato, metodo e supporto costante per costruire risultati concreti e sostenibili.",primary:"Prenota una consulenza",secondary:"Scopri i servizi"},"home.intro":{title:"Allenarsi bene significa sentirsi capiti, prima ancora che guidati.",body:"Sono Francesco Crivello, Personal Trainer. Partiamo dall’ascolto, definiamo obiettivi realistici e costruiamo un percorso progressivo.",link:"Conosci Francesco"},"home.cta":{title:"Parliamo dei tuoi obiettivi.",body:"Una consulenza conoscitiva, senza pressioni, per capire insieme da dove partire.",button:"Prenota una consulenza"}});const hero=content["home.hero"],intro=content["home.intro"],cta=content["home.cta"];
   return (
     <>
       <section className="hero hero-branded">
@@ -57,8 +67,8 @@ export function Home() {
       <section className="section intro-section" id="inizia">
         <Container>
           <div className="intro-grid">
-            <div className="intro-statement"><span>01 — Il percorso</span><h2>Allenarsi bene significa sentirsi <em>capiti,</em> prima ancora che guidati.</h2></div>
-            <div className="intro-copy"><p>Sono Francesco Crivello, Personal Trainer. Aiuto persone con esperienze e obiettivi diversi a costruire un rapporto più consapevole con l’allenamento.</p><p>Partiamo dall’ascolto, definiamo obiettivi realistici e costruiamo un percorso progressivo: ogni scelta ha un motivo, ogni progresso trova il suo tempo.</p><Link href="/chi-sono" className="text-link">Conosci Francesco <ArrowRight size={16} /></Link></div>
+            <div className="intro-statement"><span>01 — Il percorso</span><h2>{intro.title}</h2></div>
+            <div className="intro-copy"><p>{intro.body}</p><Link href="/chi-sono" className="text-link">{intro.link} <ArrowRight size={16} /></Link></div>
           </div>
           <div className="value-strip">
             <div><span>01</span><strong>Ascolto</strong><p>La tua storia viene prima della scheda.</p></div>
@@ -71,7 +81,7 @@ export function Home() {
       <section className="section services-section">
         <Container>
           <div className="section-heading-row"><SectionTitle eyebrow="Servizi" title={<>Il percorso giusto,<br /><em>al tuo ritmo.</em></>} body="Dalla prima valutazione al coaching online: soluzioni flessibili, sempre costruite intorno alle tue esigenze." /><Button href="/servizi" variant="secondary">Vedi tutti i servizi</Button></div>
-          <div className="service-grid featured-services">{services.slice(0, 6).map((service, index) => <ServiceCard key={service.slug} service={service} index={index} />)}</div>
+          <div className="service-grid featured-services">{catalog.slice(0, 6).map((service, index) => <ServiceCard key={service.slug} service={service} index={index} />)}</div>
         </Container>
       </section>
 
@@ -85,24 +95,27 @@ export function Home() {
         <Container><SectionTitle eyebrow="Esperienze" title={<>Il valore di sentirsi<br /><em>seguiti davvero.</em></>} body="Recensioni dimostrative. Le testimonianze reali saranno pubblicate solo con consenso esplicito." /><div className="testimonial-grid">{testimonials.map((item) => <article className="testimonial-card" key={item.name}><Quote size={28} /><div className="stars" aria-label="5 stelle">{[1,2,3,4,5].map(i => <Star key={i} size={14} fill="currentColor" />)}</div><blockquote>“{item.quote}”</blockquote><footer><span className="testimonial-avatar">{item.name[0]}</span><span><strong>{item.name}</strong><small>{item.meta}</small></span></footer></article>)}</div></Container>
       </section>
 
-      <section className="cta-section"><Container><div><Eyebrow tone="dark">Il primo passo è semplice</Eyebrow><h2>Parliamo dei tuoi obiettivi.</h2><p>Una consulenza conoscitiva, senza pressioni, per capire insieme da dove partire.</p></div><Button href="/prenota">Prenota una consulenza</Button></Container></section>
+      <section className="cta-section"><Container><div><Eyebrow tone="dark">Il primo passo è semplice</Eyebrow><h2>{cta.title}</h2><p>{cta.body}</p></div><Button href="/prenota">{cta.button}</Button></Container></section>
     </>
   );
 }
 
-function ServiceCard({ service, index }: { service: (typeof services)[number]; index: number }) {
+function ServiceCard({ service, index }: { service: PublicService; index: number }) {
   const Icon = service.icon;
   return <article className={`service-card ${index === 0 ? "service-card-highlight" : ""}`}><div className="service-card-top"><span className="service-icon"><Icon size={22} /></span><small>{String(index + 1).padStart(2, "0")}</small></div><h3>{service.name}</h3><p>{service.short}</p><div className="service-meta"><span>{service.duration}</span><i /><span>{service.mode}</span></div><Link href={`/servizi/${service.slug}`} aria-label={`Scopri ${service.name}`}><ArrowRight size={18} /></Link></article>;
 }
 
 export function ServicesPage() {
-  return <><PageHero eyebrow="Servizi" title={<>Un allenamento che<br /><em>parla di te.</em></>} body="Ogni servizio è un punto di partenza. Il percorso viene poi adattato a obiettivi, esperienza e disponibilità." /><section className="section"><Container><div className="service-grid all-services">{services.map((service, index) => <ServiceCard key={service.slug} service={service} index={index} />)}</div></Container></section><ContactBand /></>;
+  const catalog = usePublicServices();
+  return <><PageHero eyebrow="Servizi" title={<>Un allenamento che<br /><em>parla di te.</em></>} body="Ogni servizio è un punto di partenza. Il percorso viene poi adattato a obiettivi, esperienza e disponibilità." /><section className="section"><Container><div className="service-grid all-services">{catalog.map((service, index) => <ServiceCard key={service.slug} service={service} index={index} />)}</div></Container></section><ContactBand /></>;
 }
 
 export function ServiceDetail({ slug }: { slug: string }) {
-  const service = services.find((item) => item.slug === slug) || services[0];
+  const catalog = usePublicServices();
+  const service = catalog.find((item) => item.slug === slug) || catalog[0];
+  if (!service) return null;
   const Icon = service.icon;
-  return <><section className="detail-hero"><Container><Link className="back-link" href="/servizi">← Tutti i servizi</Link><div className="detail-hero-grid"><div><span className="large-service-icon"><Icon size={30} /></span><Eyebrow tone="dark">Percorso personalizzato</Eyebrow><h1>{service.name}</h1><p>{service.short} La proposta definitiva viene concordata dopo un colloquio conoscitivo.</p><div className="hero-actions"><Button href="/prenota">Prenota ora</Button><Button href="/contatti" variant="light">Richiedi informazioni</Button></div></div><div className="detail-summary"><div><small>Durata</small><strong>{service.duration}</strong></div><div><small>Modalità</small><strong>{service.mode}</strong></div><div><small>Prima di iniziare</small><strong>Colloquio + anamnesi</strong></div></div></div></Container></section><section className="section"><Container className="content-narrow"><SectionTitle eyebrow="Come funziona" title="Un percorso chiaro, dall’inizio." body="Questi contenuti sono modificabili dalla dashboard amministrativa." /><div className="detail-columns"><div><h3>Per chi è indicato</h3><CheckItem>Vuoi essere seguito con attenzione tecnica</CheckItem><CheckItem>Cerchi una programmazione sostenibile</CheckItem><CheckItem>Preferisci obiettivi concreti e verificabili</CheckItem><CheckItem>Vuoi allenarti con maggiore sicurezza</CheckItem></div><div><h3>Cosa include</h3><CheckItem>Colloquio e valutazione iniziale</CheckItem><CheckItem>Programmazione personalizzata</CheckItem><CheckItem>Monitoraggio dei progressi</CheckItem><CheckItem>Aggiornamenti periodici del percorso</CheckItem></div></div></Container></section><ContactBand /></>;
+  return <><section className="detail-hero"><Container><Link className="back-link" href="/servizi">← Tutti i servizi</Link><div className="detail-hero-grid"><div><span className="large-service-icon"><Icon size={30} /></span><Eyebrow tone="dark">Percorso personalizzato</Eyebrow><h1>{service.name}</h1><p>{service.full || service.short} La proposta definitiva viene concordata dopo un colloquio conoscitivo.</p><div className="hero-actions"><Button href="/prenota">Prenota ora</Button><Button href="/contatti" variant="light">Richiedi informazioni</Button></div></div><div className="detail-summary"><div><small>Durata</small><strong>{service.duration}</strong></div><div><small>Modalità</small><strong>{service.mode}</strong></div><div><small>Prima di iniziare</small><strong>Colloquio + anamnesi</strong></div></div></div></Container></section><section className="section"><Container className="content-narrow"><SectionTitle eyebrow="Come funziona" title="Un percorso chiaro, dall’inizio." body="Questi contenuti sono modificabili dalla dashboard amministrativa." /><div className="detail-columns"><div><h3>Per chi è indicato</h3><CheckItem>Vuoi essere seguito con attenzione tecnica</CheckItem><CheckItem>Cerchi una programmazione sostenibile</CheckItem><CheckItem>Preferisci obiettivi concreti e verificabili</CheckItem><CheckItem>Vuoi allenarti con maggiore sicurezza</CheckItem></div><div><h3>Cosa include</h3><CheckItem>Colloquio e valutazione iniziale</CheckItem><CheckItem>Programmazione personalizzata</CheckItem><CheckItem>Monitoraggio dei progressi</CheckItem><CheckItem>Aggiornamenti periodici del percorso</CheckItem></div></div></Container></section><ContactBand /></>;
 }
 
 export function MethodSection() {
@@ -114,7 +127,8 @@ export function MethodPage() {
 }
 
 export function AboutPage() {
-  return <><section className="about-hero"><Container><div className="about-photo"><Image src="/brand/francesco-crivello-hero.jpeg" alt="Francesco Crivello, Personal Trainer e Chinesiologo" fill sizes="(max-width: 800px) 100vw, 50vw" /></div><div><Eyebrow>Chi sono</Eyebrow><h1>Competenza, ascolto<br />e un metodo che <em>si adatta.</em></h1><p>Sono Francesco Crivello, Personal Trainer. Credo in un allenamento costruito con cura: abbastanza sfidante da farti crescere, abbastanza realistico da diventare parte della tua vita.</p><Button href="/prenota">Conosciamoci</Button></div></Container></section><section className="section"><Container><div className="about-grid"><div><SectionTitle eyebrow="Il profilo" title="Formazione e pratica, al servizio della persona." /><p className="large-copy">[Testo modificabile] Inserire qui la presentazione professionale, il percorso formativo e le esperienze lavorative di Francesco.</p></div><div className="credentials"><article><Award /><div><h3>Formazione</h3><p>[Laurea, diploma o percorso formativo da inserire]</p></div></article><article><ShieldCheck /><div><h3>Certificazioni</h3><p>[Certificazioni professionali da inserire e verificare]</p></div></article><article><Target /><div><h3>Specializzazioni</h3><p>Forza, ricomposizione, mobilità e preparazione atletica.</p></div></article><article><HeartHandshake /><div><h3>Persone seguite</h3><p>Principianti, sportivi amatoriali e persone che riprendono ad allenarsi.</p></div></article></div></div></Container></section><section className="philosophy"><Container><Sparkles /><blockquote>“Non inseguo scorciatoie. Costruiamo capacità, fiducia e abitudini che possano restare.”</blockquote><span>— Filosofia di allenamento, testo modificabile</span></Container></section><ContactBand /></>;
+  const content=usePublicContent({"about.main":{title:"Competenza, ascolto e un metodo che si adatta.",body:"Sono Francesco Crivello, Personal Trainer. Credo in un allenamento costruito con cura e sostenibile nella vita reale.",training:"Formazione professionale da completare.",certifications:"Certificazioni da completare.",philosophy:"Non inseguo scorciatoie. Costruiamo capacità, fiducia e abitudini che possano restare."}})["about.main"];
+  return <><section className="about-hero"><Container><div className="about-photo"><Image src="/brand/francesco-crivello-hero.jpeg" alt="Francesco Crivello, Personal Trainer e Chinesiologo" fill sizes="(max-width: 800px) 100vw, 50vw" /></div><div><Eyebrow>Chi sono</Eyebrow><h1>{content.title}</h1><p>{content.body}</p><Button href="/prenota">Conosciamoci</Button></div></Container></section><section className="section"><Container><div className="about-grid"><div><SectionTitle eyebrow="Il profilo" title="Formazione e pratica, al servizio della persona." /><p className="large-copy">{content.body}</p></div><div className="credentials"><article><Award /><div><h3>Formazione</h3><p>{content.training}</p></div></article><article><ShieldCheck /><div><h3>Certificazioni</h3><p>{content.certifications}</p></div></article><article><Target /><div><h3>Specializzazioni</h3><p>Forza, ricomposizione, mobilità e preparazione atletica.</p></div></article><article><HeartHandshake /><div><h3>Persone seguite</h3><p>Principianti, sportivi amatoriali e persone che riprendono ad allenarsi.</p></div></article></div></div></Container></section><section className="philosophy"><Container><Sparkles /><blockquote>“{content.philosophy}”</blockquote><span>— Filosofia di allenamento</span></Container></section><ContactBand /></>;
 }
 
 export function ContactPage() {
@@ -135,6 +149,7 @@ export function PageHero({ eyebrow, title, body }: { eyebrow: string; title: Rea
 }
 
 export function ContactForm() {
+  const catalog=usePublicServices();
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -152,7 +167,7 @@ export function ContactForm() {
       setError(cause instanceof Error ? cause.message : "Connessione non disponibile. Riprova.");
     } finally { setLoading(false); }
   }
-  return <section className="section contact-section" id="contatti"><Container><div><Eyebrow>Parliamone</Eyebrow><h2>Raccontami da dove vuoi partire.</h2><p>Compila il modulo: riceverai una conferma e ti ricontatterò per capire insieme il passo successivo.</p><div className="direct-contacts"><a href="tel:+390000000000"><Phone /> +39 000 000 0000</a><a href="mailto:ciao@francescocrivello.it"><Mail /> ciao@francescocrivello.it</a><a href="#"><Instagram /> @francescocrivello.pt</a></div></div>{sent ? <div className="form-success"><CheckCircle2 size={42} /><h3>Richiesta inviata</h3><p>Grazie! La richiesta è stata registrata come “Nuova”.</p><button onClick={() => setSent(false)} className="button button-secondary">Invia un’altra richiesta</button></div> : <form className="contact-form" onSubmit={submit}>{error && <div className="legal-notice" role="alert"><ShieldCheck /><p>{error}</p></div>}<label className="field" aria-hidden="true" style={{ position: "absolute", left: "-10000px" }}><span>Sito web</span><input name="website" tabIndex={-1} autoComplete="off" /></label><div className="form-grid"><Field label="Nome" name="firstName" required /><Field label="Cognome" name="lastName" required /><Field label="Email" name="email" type="email" required /><Field label="Telefono" name="phone" type="tel" required /><Select label="Servizio di interesse" name="service" options={services.slice(0,5).map(s => s.name)} /><Select label="Obiettivo principale" name="goal" options={["Benessere generale", "Forza", "Ricomposizione corporea", "Mobilità", "Preparazione sportiva"]} /><Select label="Modalità preferita" name="mode" options={["Online", "A domicilio", "Palestra del cliente", "Da definire"]} /><Select label="Fascia oraria" name="time" options={["Mattina", "Pausa pranzo", "Pomeriggio", "Sera"]} /></div><label className="field"><span>Messaggio</span><textarea name="message" rows={4} maxLength={2000} placeholder="Racconta brevemente cosa vorresti migliorare…" /></label><label className="checkbox"><input type="checkbox" name="privacy" required /><span>Ho letto la <Link href="/privacy" target="_blank" rel="noopener noreferrer">privacy policy</Link> e acconsento al trattamento dei dati.</span></label><label className="checkbox"><input type="checkbox" name="contactConsent" required /><span>Acconsento a essere ricontattato in merito a questa richiesta.</span></label><button className="button button-primary full-button" disabled={loading}>{loading ? "Invio in corso…" : "Invia la richiesta"}<ArrowRight size={17} /></button></form>}</Container></section>;
+  return <section className="section contact-section" id="contatti"><Container><div><Eyebrow>Parliamone</Eyebrow><h2>Raccontami da dove vuoi partire.</h2><p>Compila il modulo: riceverai una conferma e ti ricontatterò per capire insieme il passo successivo.</p><div className="direct-contacts"><a href="tel:+390000000000"><Phone /> +39 000 000 0000</a><a href="mailto:ciao@francescocrivello.it"><Mail /> ciao@francescocrivello.it</a><a href="#"><Instagram /> @francescocrivello.pt</a></div></div>{sent ? <div className="form-success"><CheckCircle2 size={42} /><h3>Richiesta inviata</h3><p>Grazie! La richiesta è stata registrata come “Nuova”.</p><button onClick={() => setSent(false)} className="button button-secondary">Invia un’altra richiesta</button></div> : <form className="contact-form" onSubmit={submit}>{error && <div className="legal-notice" role="alert"><ShieldCheck /><p>{error}</p></div>}<label className="field" aria-hidden="true" style={{ position: "absolute", left: "-10000px" }}><span>Sito web</span><input name="website" tabIndex={-1} autoComplete="off" /></label><div className="form-grid"><Field label="Nome" name="firstName" required /><Field label="Cognome" name="lastName" required /><Field label="Email" name="email" type="email" required /><Field label="Telefono" name="phone" type="tel" required /><Select label="Servizio di interesse" name="service" options={catalog.slice(0,8).map(s => s.name)} /><Select label="Obiettivo principale" name="goal" options={["Benessere generale", "Forza", "Ricomposizione corporea", "Mobilità", "Preparazione sportiva"]} /><Select label="Modalità preferita" name="mode" options={["Online", "A domicilio", "Palestra del cliente", "Da definire"]} /><Select label="Fascia oraria" name="time" options={["Mattina", "Pausa pranzo", "Pomeriggio", "Sera"]} /></div><label className="field"><span>Messaggio</span><textarea name="message" rows={4} maxLength={2000} placeholder="Racconta brevemente cosa vorresti migliorare…" /></label><label className="checkbox"><input type="checkbox" name="privacy" required /><span>Ho letto la <Link href="/privacy" target="_blank" rel="noopener noreferrer">privacy policy</Link> e acconsento al trattamento dei dati.</span></label><label className="checkbox"><input type="checkbox" name="contactConsent" required /><span>Acconsento a essere ricontattato in merito a questa richiesta.</span></label><button className="button button-primary full-button" disabled={loading}>{loading ? "Invio in corso…" : "Invia la richiesta"}<ArrowRight size={17} /></button></form>}</Container></section>;
 }
 
 export function Field({ label, name, type = "text", required = false, defaultValue, placeholder }: { label: string; name: string; type?: string; required?: boolean; defaultValue?: string; placeholder?: string }) {

@@ -16,11 +16,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ slots: data ?? [], timezone: "Europe/Rome" });
   }
   const [{ data: services, error: serviceError }, { data: locations, error: locationError }, { data: links }] = await Promise.all([
-    supabase.from("services").select("id,name,slug,short_description,duration_minutes,buffer_minutes,manual_approval").eq("is_active", true).eq("bookable_online", true).order("name"),
+    (supabase.from("services") as any).select("id,name,slug,short_description,duration_minutes,buffer_minutes,manual_approval,display_order").eq("is_active", true).eq("bookable_online", true).order("display_order").order("name"),
     supabase.from("locations").select("id,name,slug,address,city,mode").eq("is_active", true).order("name"),
     supabase.from("service_locations").select("service_id,location_id"),
   ]);
-  if (serviceError || locationError) return NextResponse.json({ error: "Catalogo non raggiungibile." }, { status: 500 });
+  if (serviceError || locationError) {
+    console.error("booking_catalog_failed", { serviceCode: serviceError?.code ?? null, serviceMessage: serviceError?.message ?? null, locationCode: locationError?.code ?? null, locationMessage: locationError?.message ?? null });
+    return NextResponse.json({ error: "Catalogo non raggiungibile." }, { status: 500 });
+  }
   return NextResponse.json({ services: services ?? [], locations: locations ?? [], serviceLocations: links ?? [] });
 }
 
@@ -45,7 +48,7 @@ export async function POST(request: NextRequest) {
   const startsAt = new Date(body.startsAt);
   if (Number.isNaN(startsAt.getTime()) || startsAt <= new Date()) return NextResponse.json({ error: "Data non valida." }, { status: 400 });
   const supabase = createPublicServerClient();
-  const { data, error } = await supabase.rpc("create_public_booking", {
+  const { data, error } = await (supabase as any).rpc("create_public_booking_v2", {
     p_service_id: body.serviceId, p_location_id: body.locationId, p_starts_at: startsAt.toISOString(),
     p_first_name: firstName, p_last_name: lastName,
     p_email: email,
@@ -68,7 +71,9 @@ export async function POST(request: NextRequest) {
     serviceName: service?.name || "Servizio prenotato",
     locationName: location?.name || "Modalità da concordare",
     startsAt,
-    bookingId: data,
+    bookingId: data.appointment_id,
   });
-  return NextResponse.json({ ok: true, bookingId: data, notificationStatus }, { status: 201 });
+  const response = NextResponse.json({ ok: true, bookingId: data.appointment_id, notificationStatus, claimAvailable: true }, { status: 201 });
+  response.cookies.set("fc_booking_claim", data.claim_token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: 2 * 60 * 60, path: "/" });
+  return response;
 }
