@@ -92,7 +92,7 @@ export function AuthPage({ mode }: { mode: "login" | "register" | "recovery" | "
       const { data: profile } = await supabase.from("profiles").select("role,is_active").eq("id", data.user.id).single();
       const requested = searchParams.get("next");
       const safeNext = requested?.startsWith("/") && !requested.startsWith("//") ? requested : null;
-      router.replace(safeNext || (profile?.role === "admin" && profile.is_active ? "/admin" : "/cliente"));
+      router.replace(safeNext || (profile?.role === "admin" && profile.is_active ? "/mfa" : "/cliente"));
       router.refresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Operazione non riuscita. Riprova.");

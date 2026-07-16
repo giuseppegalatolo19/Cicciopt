@@ -6,6 +6,7 @@ import { PublicShell } from "./public-shell";
 import { AboutPage, FaqPage, Home, LegalPage, LocationPage, MethodPage, ServiceDetail, ServicesPage } from "./public-pages";
 import { AuthPage, BookingConfirmation } from "./booking-auth";
 import BookingPage from "./booking-live";
+import { MfaPage } from "./mfa-page";
 import {
   AdminAvailability,
   AdminCalendar,
@@ -44,6 +45,7 @@ export function SitePage({ route }: { route: string }) {
   if (route === "/registrazione") return <AuthPage mode="register" />;
   if (route === "/recupera-password") return <AuthPage mode="recovery" />;
   if (route === "/aggiorna-password") return <AuthPage mode="update" />;
+  if (route === "/mfa") return <MfaPage />;
   if (route === "/prenota") return <PublicShell><BookingPage /></PublicShell>;
   if (route === "/prenotazione/conferma") return <PublicShell><BookingConfirmation /></PublicShell>;
 

@@ -8,9 +8,10 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isClientRoute = pathname === "/cliente" || pathname.startsWith("/cliente/");
   const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
+  const isMfaRoute = pathname === "/mfa";
 
   if (!url || !key || key === "your_supabase_anon_key") {
-    if (isClientRoute || isAdminRoute) {
+    if (isClientRoute || isAdminRoute || isMfaRoute) {
       const login = request.nextUrl.clone();
       login.pathname = "/login";
       login.searchParams.set("error", "Configurazione Supabase incompleta.");
@@ -31,14 +32,14 @@ export async function middleware(request: NextRequest) {
   });
 
   const { data: { user } } = await supabase.auth.getUser();
-  if ((isClientRoute || isAdminRoute) && !user) {
+  if ((isClientRoute || isAdminRoute || isMfaRoute) && !user) {
     const login = request.nextUrl.clone();
     login.pathname = "/login";
     login.searchParams.set("next", pathname);
     return NextResponse.redirect(login);
   }
 
-  if (isAdminRoute && user) {
+  if ((isAdminRoute || isMfaRoute) && user) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("role,is_active")
@@ -51,11 +52,20 @@ export async function middleware(request: NextRequest) {
       denied.search = "";
       return NextResponse.redirect(denied);
     }
+    if (isAdminRoute) {
+      const { data: assurance } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (assurance?.currentLevel !== "aal2") {
+        const mfa = request.nextUrl.clone();
+        mfa.pathname = "/mfa";
+        mfa.search = "";
+        return NextResponse.redirect(mfa);
+      }
+    }
   }
 
   return response;
 }
 
 export const config = {
-  matcher: ["/cliente/:path*", "/admin/:path*", "/login", "/registrazione", "/recupera-password", "/aggiorna-password"],
+  matcher: ["/cliente/:path*", "/admin/:path*", "/mfa", "/login", "/registrazione", "/recupera-password", "/aggiorna-password"],
 };
