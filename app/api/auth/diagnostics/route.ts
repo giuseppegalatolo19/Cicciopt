@@ -17,15 +17,25 @@ function allowRequest(request: NextRequest) {
   return true;
 }
 
+function isSameSiteOrigin(request: NextRequest, origin: string) {
+  try {
+    const originHost = new URL(origin).host;
+    const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+    const requestHost = request.headers.get("host")?.trim();
+    const configuredHost = process.env.NEXT_PUBLIC_SITE_URL
+      ? new URL(process.env.NEXT_PUBLIC_SITE_URL).host
+      : undefined;
+    return [forwardedHost, requestHost, configuredHost, request.nextUrl.host]
+      .filter(Boolean)
+      .includes(originHost);
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(request: NextRequest) {
   const origin = request.headers.get("origin");
-  if (origin) {
-    try {
-      if (new URL(origin).host !== request.nextUrl.host) return NextResponse.json({ error: "forbidden" }, { status: 403 });
-    } catch {
-      return NextResponse.json({ error: "forbidden" }, { status: 403 });
-    }
-  }
+  if (origin && !isSameSiteOrigin(request, origin)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!allowRequest(request)) return NextResponse.json({ error: "rate_limited" }, { status: 429 });
 
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
